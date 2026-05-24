@@ -216,3 +216,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Dados brutos e processados
+data/raw/
+data/processed/
+
+# Variáveis de ambiente
+.env
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+
