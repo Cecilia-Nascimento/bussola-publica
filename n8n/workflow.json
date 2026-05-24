@@ -1,0 +1,109 @@
+{
+  "name": "Bussola Publica - Alerta Semanal",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "255baf15-4bf6-4590-9ff8-bb5c1a5b4d69",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    p.id,\n    p.sigla_tipo,\n    p.ementa,\n    p.tema,\n    p.resumo_ia,\n    p.data_apresentacao\nFROM proposicoes p\nWHERE \n    p.tema IS NOT NULL\n    AND p.resumo_ia IS NOT NULL\nORDER BY p.data_apresentacao DESC\nLIMIT 5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "0ec810fe-3e99-4f5e-9aa9-136e99a8c876",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "j6acTqLwrvQZqWtd",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "cecilia.nascimento2475@outlook.com",
+        "subject": "🏛️ Bússola Pública — Proposições da Semana",
+        "message": "=<h2>🏛️ Bússola Pública — Relatório Semanal</h2> <p>Confira as proposições legislativas mais relevantes desta semana:</p>  <div style=\"border:1px solid #ddd; padding:15px; margin:10px 0; border-radius:8px;\">   <h3 style=\"color:#1a73e8;\">[{{ $json.tema }}] {{ $json.sigla_tipo }} — {{ $json.id }}</h3>   <p><strong>Ementa:</strong> {{ $json.ementa }}</p>   <p><strong>Resumo:</strong> {{ $json.resumo_ia }}</p>   <p><small>📅 Apresentada em: {{ $json.data_apresentacao }}</small></p> </div>  <hr> <p style=\"color:#999; font-size:12px;\">Relatório gerado automaticamente pelo pipeline Bússola Pública.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "8edbb9d9-0e23-47cf-a511-746126dc328a",
+      "name": "Send a message",
+      "webhookId": "d8c5b550-45da-4091-8a4c-abe232192fbd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ajIhgM9BBsCFOzSp",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "76225efd-cd92-484c-bfc8-3406a03ff530",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5e4c14c5c65f3788894f77a090fddfc207c710341a202fbcbb40366315dec7c8"
+  },
+  "id": "97aLusrMBG2F3ZV3",
+  "tags": []
+}
