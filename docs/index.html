@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🧭 Bússola Pública</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; }
+
+    /* NAV */
+    nav { background: #1a1d27; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a2d3a; position: sticky; top: 0; z-index: 100; }
+    nav h1 { font-size: 1.3rem; color: #fff; }
+    nav .tabs { display: flex; gap: 0.5rem; }
+    nav .tab { padding: 0.4rem 1rem; border-radius: 6px; border: none; cursor: pointer; background: transparent; color: #aaa; font-size: 0.9rem; transition: all 0.2s; }
+    nav .tab.active { background: #3b82f6; color: #fff; }
+    nav .tab:hover:not(.active) { background: #2a2d3a; color: #fff; }
+
+    /* SECTIONS */
+    .section { display: none; padding: 2rem; max-width: 1200px; margin: 0 auto; }
+    .section.active { display: block; }
+
+    /* CARDS */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 1.5rem; text-align: center; }
+    .card .num { font-size: 2rem; font-weight: 700; color: #3b82f6; }
+    .card .lbl { font-size: 0.85rem; color: #888; margin-top: 0.3rem; }
+
+    /* PIPELINE */
+    .pipeline { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.5rem; margin: 2rem 0; }
+    .pipe-node { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 1rem 1.5rem; text-align: center; min-width: 130px; cursor: pointer; transition: all 0.3s; }
+    .pipe-node:hover { border-color: #3b82f6; transform: translateY(-4px); }
+    .pipe-node .icon { font-size: 2rem; }
+    .pipe-node .title { font-size: 0.85rem; font-weight: 600; margin-top: 0.4rem; color: #fff; }
+    .pipe-node .sub { font-size: 0.75rem; color: #888; margin-top: 0.2rem; }
+    .pipe-arrow { color: #3b82f6; font-size: 1.5rem; }
+    .pipe-detail { background: #1a1d27; border: 1px solid #3b82f6; border-radius: 12px; padding: 1.5rem; margin-top: 1rem; display: none; }
+    .pipe-detail.active { display: block; }
+    .pipe-detail h3 { color: #3b82f6; margin-bottom: 0.5rem; }
+    .pipe-detail p { color: #ccc; font-size: 0.9rem; line-height: 1.6; }
+
+    /* CHARTS */
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+    .chart-box { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 1.5rem; }
+    .chart-box h3 { font-size: 1rem; margin-bottom: 1rem; color: #fff; }
+    @media (max-width: 768px) { .charts { grid-template-columns: 1fr; } }
+
+    /* TABLE */
+    .table-wrap { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; overflow: hidden; margin-bottom: 2rem; }
+    .table-header { padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #2a2d3a; }
+    .table-header h3 { color: #fff; }
+    .filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .filter-btn { padding: 0.3rem 0.8rem; border-radius: 20px; border: 1px solid #2a2d3a; background: transparent; color: #aaa; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+    .filter-btn.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 0.8rem 1rem; text-align: left; font-size: 0.8rem; color: #888; border-bottom: 1px solid #2a2d3a; background: #13151f; }
+    td { padding: 0.8rem 1rem; font-size: 0.85rem; border-bottom: 1px solid #1e2130; vertical-align: top; }
+    tr:hover td { background: #1e2130; }
+    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+    .badge-saude { background: #064e3b; color: #6ee7b7; }
+    .badge-tributario { background: #422006; color: #fcd34d; }
+    .badge-tecnologia { background: #1e3a5f; color: #93c5fd; }
+    .badge-trabalho { background: #3b0764; color: #d8b4fe; }
+    .badge-outros { background: #1f2937; color: #9ca3af; }
+    .badge-economia { background: #7f1d1d; color: #fca5a5; }
+    .badge-educacao { background: #14532d; color: #86efac; }
+    .badge-infraestrutura { background: #1c3456; color: #7dd3fc; }
+    .badge-seguranca { background: #431407; color: #fdba74; }
+    .badge-meio-ambiente { background: #14532d; color: #86efac; }
+
+    /* CHATBOT */
+    .chat-wrap { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; overflow: hidden; }
+    .chat-messages { height: 400px; overflow-y: auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+    .msg { max-width: 80%; padding: 0.8rem 1rem; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; }
+    .msg.bot { background: #13151f; border: 1px solid #2a2d3a; align-self: flex-start; color: #e0e0e0; }
+    .msg.user { background: #3b82f6; align-self: flex-end; color: #fff; }
+    .msg.loading { color: #888; font-style: italic; }
+    .chat-input { display: flex; gap: 0.5rem; padding: 1rem; border-top: 1px solid #2a2d3a; }
+    .chat-input input { flex: 1; background: #13151f; border: 1px solid #2a2d3a; border-radius: 8px; padding: 0.7rem 1rem; color: #fff; font-size: 0.9rem; outline: none; }
+    .chat-input input:focus { border-color: #3b82f6; }
+    .chat-input button { background: #3b82f6; border: none; border-radius: 8px; padding: 0.7rem 1.2rem; color: #fff; cursor: pointer; font-size: 0.9rem; transition: background 0.2s; }
+    .chat-input button:hover { background: #2563eb; }
+    .suggestions { display: flex; gap: 0.5rem; flex-wrap: wrap; padding: 0 1rem 1rem; }
+    .sug { padding: 0.4rem 0.8rem; border-radius: 20px; border: 1px solid #2a2d3a; background: transparent; color: #aaa; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+    .sug:hover { border-color: #3b82f6; color: #3b82f6; }
+
+    /* LOADING */
+    .loading-state { text-align: center; padding: 3rem; color: #888; }
+    .page-title { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 0.5rem; }
+    .page-sub { color: #888; font-size: 0.9rem; margin-bottom: 2rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <h1>🧭 Bússola Pública</h1>
+  <div class="tabs">
+    <button class="tab active" onclick="showSection('pipeline')">Pipeline</button>
+    <button class="tab" onclick="showSection('dashboard')">Dashboard</button>
+    <button class="tab" onclick="showSection('chatbot')">Chatbot IA</button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PIPELINE                                               -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section active" id="pipeline">
+  <p class="page-title">Arquitetura do Pipeline</p>
+  <p class="page-sub">Clique em cada etapa para ver os detalhes técnicos</p>
+
+  <div class="pipeline">
+    <div class="pipe-node" onclick="showDetail('d1')">
+      <div class="icon">🏛️</div>
+      <div class="title">API Câmara</div>
+      <div class="sub">Fonte dos dados</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" onclick="showDetail('d2')">
+      <div class="icon">🐍</div>
+      <div class="title">Extração</div>
+      <div class="sub">Python + requests</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" onclick="showDetail('d3')">
+      <div class="icon">🐼</div>
+      <div class="title">Transformação</div>
+      <div class="sub">Pandas + validação</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" onclick="showDetail('d4')">
+      <div class="icon">🐘</div>
+      <div class="title">PostgreSQL</div>
+      <div class="sub">Supabase cloud</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" onclick="showDetail('d5')">
+      <div class="icon">🤖</div>
+      <div class="title">Camada IA</div>
+      <div class="sub">OpenAI embeddings</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" onclick="showDetail('d6')">
+      <div class="icon">⚡</div>
+      <div class="title">n8n</div>
+      <div class="sub">Automação semanal</div>
+    </div>
+  </div>
+
+  <div class="pipe-detail" id="d1">
+    <h3>🏛️ API da Câmara dos Deputados</h3>
+    <p>API pública e gratuita com dados de deputados, proposições, votações e despesas. Endpoints utilizados: <strong>/deputados</strong>, <strong>/proposicoes</strong>, <strong>/votacoes</strong>, <strong>/partidos</strong>. A API retorna dados paginados — o extrator percorre todas as páginas automaticamente.</p>
+  </div>
+  <div class="pipe-detail" id="d2">
+    <h3>🐍 Extração com Python</h3>
+    <p>Script <strong>src/extractor.py</strong> realiza chamadas HTTP com a biblioteca <strong>requests</strong>, trata paginação automática via loop while, implementa retry com backoff exponencial (2s, 4s, 8s) e salva os JSONs brutos em <strong>data/raw/</strong> com timestamp — garantindo rastreabilidade de cada extração.</p>
+  </div>
+  <div class="pipe-detail" id="d3">
+    <h3>🐼 Transformação com Pandas</h3>
+    <p>Script <strong>src/transformer.py</strong> carrega os JSONs, normaliza campos aninhados com <strong>pd.json_normalize()</strong>, valida campos obrigatórios, remove duplicatas, converte tipos e renomeia colunas para snake_case. Zero registros inválidos encontrados nos dados da Câmara.</p>
+  </div>
+  <div class="pipe-detail" id="d4">
+    <h3>🐘 PostgreSQL no Supabase</h3>
+    <p>Banco de dados PostgreSQL 17 hospedado no Supabase. Modelo com <strong>2 tabelas dimensão</strong> (deputados, partidos) e <strong>2 tabelas fato</strong> (proposicoes, votacoes). Total de <strong>16.552 registros</strong> carregados. Script <strong>src/loader.py</strong> usa SQLAlchemy com inserção em lote de 500 registros.</p>
+  </div>
+  <div class="pipe-detail" id="d5">
+    <h3>🤖 Camada de IA</h3>
+    <p>Script <strong>src/ai_layer.py</strong> usa o modelo <strong>text-embedding-3-small</strong> da OpenAI para gerar embeddings das ementas e classificar por tema via similaridade de cosseno. O modelo <strong>gpt-4o-mini</strong> gera resumos executivos em 2 linhas para cada proposição. Custo médio: $0,0003 por 20 proposições.</p>
+  </div>
+  <div class="pipe-detail" id="d6">
+    <h3>⚡ Automação com n8n</h3>
+    <p>Workflow <strong>Bússola Pública — Alerta Semanal</strong> publicado no n8n cloud. Executa toda segunda-feira às 6h: consulta SQL no Supabase buscando as 5 proposições mais relevantes com tema e resumo IA, formata em HTML e envia por email via Gmail automaticamente.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- DASHBOARD                                              -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="dashboard">
+  <p class="page-title">Dashboard Legislativo</p>
+  <p class="page-sub">Dados em tempo real do banco PostgreSQL</p>
+
+  <div class="cards" id="stats-cards">
+    <div class="card"><div class="num" id="total-prop">—</div><div class="lbl">Proposições</div></div>
+    <div class="card"><div class="num" id="total-dep">—</div><div class="lbl">Deputados</div></div>
+    <div class="card"><div class="num" id="total-vot">—</div><div class="lbl">Votações</div></div>
+    <div class="card"><div class="num" id="total-part">—</div><div class="lbl">Partidos</div></div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-box">
+      <h3>📊 Proposições por Tema</h3>
+      <canvas id="chartTema" height="250"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>🗳️ Votações por Resultado</h3>
+      <canvas id="chartVot" height="250"></canvas>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <h3>📋 Proposições com IA</h3>
+      <div class="filter-bar" id="filter-bar">
+        <button class="filter-btn active" onclick="filterTema('todos')">Todos</button>
+      </div>
+    </div>
+    <div id="table-body">
+      <div class="loading-state">Carregando dados...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- CHATBOT                                                -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="section" id="chatbot">
+  <p class="page-title">Chatbot Legislativo IA</p>
+  <p class="page-sub">Faça perguntas sobre as proposições usando linguagem natural</p>
+
+  <div class="chat-wrap">
+    <div class="chat-messages" id="chat-messages">
+      <div class="msg bot">
+        👋 Olá! Sou o assistente da <strong>Bússola Pública</strong>. Posso responder perguntas sobre as proposições legislativas da Câmara dos Deputados. Como posso ajudar?
+      </div>
+    </div>
+    <div class="suggestions">
+      <button class="sug" onclick="sendSug(this)">Quais proposições de Saúde existem?</button>
+      <button class="sug" onclick="sendSug(this)">Mostre proposições Tributárias</button>
+      <button class="sug" onclick="sendSug(this)">Quantas proposições foram classificadas?</button>
+      <button class="sug" onclick="sendSug(this)">Quais partidos têm mais deputados?</button>
+    </div>
+    <div class="chat-input">
+      <input type="text" id="chat-input" placeholder="Digite sua pergunta..." onkeydown="if(event.key==='Enter') sendMessage()"/>
+      <button onclick="sendMessage()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Config Supabase ────────────────────────────────────────
+const SUPABASE_URL = 'https://cbaakbwnwqnelqtdwley.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_rPJd6DOLk46HDJMl4nVCcA_9sNRcfmM'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ─── Navegação ──────────────────────────────────────────────
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'))
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+  document.getElementById(id).classList.add('active')
+  event.target.classList.add('active')
+  if (id === 'dashboard') loadDashboard()
+}
+
+// ─── Pipeline detalhe ───────────────────────────────────────
+function showDetail(id) {
+  const el = document.getElementById(id)
+  const isOpen = el.classList.contains('active')
+  document.querySelectorAll('.pipe-detail').forEach(d => d.classList.remove('active'))
+  if (!isOpen) el.classList.add('active')
+}
+
+// ─── Dashboard ──────────────────────────────────────────────
+let dashLoaded = false
+let allProposicoes = []
+let chartTema, chartVot
+
+async function loadDashboard() {
+  if (dashLoaded) return
+  dashLoaded = true
+
+  // Stats
+  const [p, d, v, pt] = await Promise.all([
+    sb.from('proposicoes').select('*', { count: 'exact', head: true }),
+    sb.from('deputados').select('*', { count: 'exact', head: true }),
+    sb.from('votacoes').select('*', { count: 'exact', head: true }),
+    sb.from('partidos').select('*', { count: 'exact', head: true }),
+  ])
+  document.getElementById('total-prop').textContent = p.count?.toLocaleString() || '—'
+  document.getElementById('total-dep').textContent  = d.count?.toLocaleString() || '—'
+  document.getElementById('total-vot').textContent  = v.count?.toLocaleString() || '—'
+  document.getElementById('total-part').textContent = pt.count?.toLocaleString() || '—'
+
+  // Proposições com IA
+  const { data: props } = await sb.from('proposicoes')
+    .select('id, sigla_tipo, ementa, tema, resumo_ia, data_apresentacao')
+    .not('tema', 'is', null)
+    .order('data_apresentacao', { ascending: false })
+    .limit(200)
+
+  allProposicoes = props || []
+
+  // Filtros por tema
+  const temas = [...new Set(allProposicoes.map(p => p.tema).filter(Boolean))]
+  const fb = document.getElementById('filter-bar')
+  temas.forEach(t => {
+    const btn = document.createElement('button')
+    btn.className = 'filter-btn'
+    btn.textContent = t
+    btn.onclick = () => filterTema(t)
+    fb.appendChild(btn)
+  })
+
+  renderTable(allProposicoes)
+
+  // Chart temas
+  const temaCounts = {}
+  allProposicoes.forEach(p => { if(p.tema) temaCounts[p.tema] = (temaCounts[p.tema]||0)+1 })
+  const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16','#ec4899','#6b7280']
+
+  if (chartTema) chartTema.destroy()
+  chartTema = new Chart(document.getElementById('chartTema'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(temaCounts),
+      datasets: [{ data: Object.values(temaCounts), backgroundColor: colors }]
+    },
+    options: { plugins: { legend: { labels: { color: '#ccc', font: { size: 11 } } } } }
+  })
+
+  // Chart votações
+  const { data: vots } = await sb.from('votacoes').select('aprovacao').limit(500)
+  const aprovadas = vots?.filter(v => v.aprovacao === 1).length || 0
+  const rejeitadas = vots?.filter(v => v.aprovacao === 0).length || 0
+
+  if (chartVot) chartVot.destroy()
+  chartVot = new Chart(document.getElementById('chartVot'), {
+    type: 'bar',
+    data: {
+      labels: ['Aprovadas', 'Rejeitadas'],
+      datasets: [{ data: [aprovadas, rejeitadas], backgroundColor: ['#10b981','#ef4444'] }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { color: '#888' } }, y: { ticks: { color: '#888' } } }
+    }
+  })
+}
+
+function getBadgeClass(tema) {
+  const map = { 'Saúde': 'saude', 'Tributário': 'tributario', 'Tecnologia': 'tecnologia', 'Trabalho': 'trabalho', 'Outros': 'outros', 'Economia': 'economia', 'Educação': 'educacao', 'Infraestrutura': 'infraestrutura', 'Segurança Pública': 'seguranca', 'Meio Ambiente': 'meio-ambiente' }
+  return 'badge badge-' + (map[tema] || 'outros')
+}
+
+function renderTable(data) {
+  const body = document.getElementById('table-body')
+  if (!data.length) { body.innerHTML = '<div class="loading-state">Nenhum resultado encontrado</div>'; return }
+  body.innerHTML = `
+    <table>
+      <thead><tr><th>ID</th><th>Tipo</th><th>Tema</th><th>Ementa</th><th>Resumo IA</th></tr></thead>
+      <tbody>
+        ${data.slice(0,50).map(p => `
+          <tr>
+            <td>${p.id}</td>
+            <td>${p.sigla_tipo||'—'}</td>
+            <td><span class="${getBadgeClass(p.tema)}">${p.tema||'—'}</span></td>
+            <td style="max-width:300px">${(p.ementa||'').substring(0,100)}...</td>
+            <td style="max-width:300px">${p.resumo_ia||'—'}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`
+}
+
+function filterTema(tema) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'))
+  event.target.classList.add('active')
+  const filtered = tema === 'todos' ? allProposicoes : allProposicoes.filter(p => p.tema === tema)
+  renderTable(filtered)
+}
+
+// ─── Chatbot ────────────────────────────────────────────────
+async function sendMessage() {
+  const input = document.getElementById('chat-input')
+  const msg = input.value.trim()
+  if (!msg) return
+  input.value = ''
+  addMsg(msg, 'user')
+  const loading = addMsg('Consultando o banco de dados...', 'bot loading')
+
+  const { data: props } = await sb.from('proposicoes')
+    .select('id, sigla_tipo, ementa, tema, resumo_ia')
+    .not('tema', 'is', null)
+    .limit(50)
+
+  const { data: deps } = await sb.from('deputados')
+    .select('nome, sigla_partido, sigla_uf')
+    .limit(20)
+
+  const contexto = `
+Você é um assistente de inteligência legislativa da Bússola Pública.
+Responda em português, de forma clara e objetiva.
+
+DADOS DO BANCO (amostra):
+Proposições classificadas por IA:
+${(props||[]).slice(0,20).map(p => `- [${p.tema}] ${p.sigla_tipo} ${p.id}: ${p.ementa?.substring(0,100)}. Resumo: ${p.resumo_ia?.substring(0,80)}`).join('\n')}
+
+Deputados (amostra):
+${(deps||[]).slice(0,10).map(d => `- ${d.nome} (${d.sigla_partido}/${d.sigla_uf})`).join('\n')}
+
+Pergunta do usuário: ${msg}
+`
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${document.getElementById('oai-key').value}` },
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: contexto }], max_tokens: 300 })
+    })
+    const data = await res.json()
+    loading.remove()
+    addMsg(data.choices?.[0]?.message?.content || 'Não consegui obter resposta.', 'bot')
+  } catch(e) {
+    loading.remove()
+    addMsg('❌ Configure sua chave OpenAI abaixo para usar o chatbot.', 'bot')
+  }
+}
+
+function sendSug(btn) {
+  document.getElementById('chat-input').value = btn.textContent
+  sendMessage()
+}
+
+function addMsg(text, cls) {
+  const div = document.createElement('div')
+  div.className = 'msg ' + cls
+  div.innerHTML = text
+  document.getElementById('chat-messages').appendChild(div)
+  document.getElementById('chat-messages').scrollTop = 9999
+  return div
+}
+</script>
+
+<!-- Campo para chave OpenAI no chatbot -->
+<div style="position:fixed;bottom:0;left:0;right:0;background:#13151f;border-top:1px solid #2a2d3a;padding:0.5rem 1rem;display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:#888;" id="oai-bar">
+  🔑 Chave OpenAI para chatbot:
+  <input id="oai-key" type="password" placeholder="sk-..." style="background:#1a1d27;border:1px solid #2a2d3a;border-radius:6px;padding:0.3rem 0.6rem;color:#fff;font-size:0.8rem;width:300px;outline:none;"/>
+  <span style="color:#555">| Não é salva, só usada localmente</span>
+</div>
+
+</body>
+</html>
