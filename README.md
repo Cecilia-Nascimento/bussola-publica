@@ -172,9 +172,20 @@ Melhor custo-benefício para geração de texto — qualidade próxima ao GPT-4 
 
 ---
 
+## 🌐 Demo Online
+
+🔗 **Site interativo:** https://cecilia-nascimento.github.io/bussola-publica
+
+Inclui:
+- Diagrama interativo do pipeline com detalhes técnicos
+- Dashboard com dados reais do banco PostgreSQL
+- Chatbot legislativo com IA
+
+🔗 **Banco de dados:** https://supabase.com/dashboard/project/cbaakbwnwqnelqtdwley
+
 ## 📊 Banco de Dados
 
-🔗 Projeto Supabase (somente leitura): *adicionar link aqui*
+🔗 Projeto Supabase (somente leitura): [https://supabase.com/dashboard/project/cbaakbwnwqnelqtdwley]
 
 ---
 
