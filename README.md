@@ -6,6 +6,14 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-blue)
 ![OpenAI](https://img.shields.io/badge/OpenAI-Embeddings-green)
 ![n8n](https://img.shields.io/badge/n8n-Automação-orange)
+![React](https://img.shields.io/badge/React-19-61dafb)
+
+---
+
+## 🌐 Links do Projeto
+
+🔗 **Frontend interativo:** https://compass-legislative.lovable.app  
+🔗 **Banco de dados:** https://supabase.com/dashboard/project/cbaakbwnwqnelqtdwley
 
 ---
 
@@ -57,9 +65,9 @@ n8n (relatório semanal por email)
 | `proposicoes` | Projetos de lei e proposições | 14.277 |
 | `votacoes` | Votações em plenário e comissões | 1.741 |
 
-### Colunas geradas por IA (tabela proposicoes)
-- `tema` — classificação temática via embeddings (Saúde, Tributário, Tecnologia...)
-- `resumo_ia` — resumo executivo de 2 linhas gerado pelo GPT-4o-mini
+### Colunas geradas por IA
+- `tema` — classificação temática via embeddings
+- `resumo_ia` — resumo executivo gerado pelo GPT-4o-mini
 
 ---
 
@@ -69,12 +77,10 @@ n8n (relatório semanal por email)
 - Modelo: `text-embedding-3-small` (OpenAI)
 - Temas: Saúde, Tributário, Tecnologia, Trabalho, Meio Ambiente, Educação, Segurança Pública, Economia, Infraestrutura, Outros
 - Método: similaridade de cosseno entre embedding da ementa e embedding de cada tema
-- Resultado: coluna `tema` na tabela `proposicoes`
 
 ### Caminho B — Resumo executivo
 - Modelo: `gpt-4o-mini`
 - Prompt: resumo em 2 linhas em linguagem clara para executivos
-- Resultado: coluna `resumo_ia` na tabela `proposicoes`
 
 ---
 
@@ -88,7 +94,31 @@ Workflow: **Bússola Pública — Alerta Semanal**
 
 ---
 
-## 🚀 Como Rodar
+## 🖥️ Frontend
+
+Interface web construída com React 19, TanStack Router e Shadcn UI — conectada ao Supabase em tempo real.
+
+🔗 **Demo online:** https://compass-legislative.lovable.app
+
+**Páginas disponíveis:**
+- Dashboard com métricas e gráficos ao vivo
+- Proposições com filtros por tema e tipo
+- Deputados com fotos e perfis reais
+- Chatbot legislativo com OpenAI
+- Pipeline, Modelo de Dados, Camada de IA e Automação n8n documentados
+
+### Rodar o frontend localmente
+
+```bash
+cd frontend
+npm install
+npm run dev
+# Acesse: http://localhost:8080
+```
+
+---
+
+## 🚀 Como Rodar o Pipeline
 
 ### Pré-requisitos
 - Python 3.11+
@@ -104,8 +134,8 @@ cd bussola-publica
 
 # Criar e ativar ambiente virtual
 python -m venv .venv
-.venv\Scripts\activate  # Windows
-source .venv/bin/activate  # Mac/Linux
+.venv\Scripts\activate       # Windows
+source .venv/bin/activate    # Mac/Linux
 
 # Instalar dependências
 pip install -r requirements.txt
@@ -115,7 +145,7 @@ copy .env.example .env
 # Editar .env com suas credenciais
 ```
 
-### Executar o pipeline
+### Executar
 
 ```bash
 # Etapa 2 — Extração
@@ -137,6 +167,13 @@ bussola-publica/
 ├── data/
 │   ├── raw/              # JSONs brutos da API
 │   └── processed/        # Dados processados
+│
+├── frontend/             # Interface React
+│   ├── src/
+│   │   ├── routes/       # Páginas do app
+│   │   ├── components/   # Componentes UI
+│   │   └── lib/          # Supabase e utilitários
+│   └── package.json
 │
 ├── notebooks/
 │   └── 01_exploracao_api.ipynb
@@ -162,7 +199,7 @@ bussola-publica/
 PostgreSQL gerenciado na nuvem com plano gratuito generoso, painel visual e fácil integração com n8n.
 
 **Por que salvar JSON bruto antes de transformar?**
-Separar extração de transformação garante que, se o código de transformação quebrar, não é necessário refazer a chamada à API.
+Separar extração de transformação garante que, se o código de transformar quebrar, não é necessário refazer a chamada à API.
 
 **Por que embeddings para classificação de tema?**
 Classificação semântica é mais robusta que keywords — captura contexto mesmo quando as palavras exatas do tema não aparecem na ementa.
@@ -170,28 +207,14 @@ Classificação semântica é mais robusta que keywords — captura contexto mes
 **Por que gpt-4o-mini para resumos?**
 Melhor custo-benefício para geração de texto — qualidade próxima ao GPT-4 a uma fração do custo.
 
----
-
-## 🌐 Demo Online
-
-🔗 **Site interativo:** https://cecilia-nascimento.github.io/bussola-publica
-
-Inclui:
-- Diagrama interativo do pipeline com detalhes técnicos
-- Dashboard com dados reais do banco PostgreSQL
-- Chatbot legislativo com IA
-
-🔗 **Banco de dados:** https://supabase.com/dashboard/project/cbaakbwnwqnelqtdwley
-
-## 📊 Banco de Dados
-
-🔗 Projeto Supabase (somente leitura): [https://supabase.com/dashboard/project/cbaakbwnwqnelqtdwley]
+**Por que React com TanStack Router no frontend?**
+Stack moderna usada no mercado, com roteamento tipado, Shadcn UI e integração nativa com Supabase em tempo real.
 
 ---
 
 ## 👩‍💻 Autora
 
-**Cecilia Nascimento**
+**Cecilia Nascimento**  
 Pós-graduação em Engenharia de Dados
 
 [![GitHub](https://img.shields.io/badge/GitHub-Cecilia--Nascimento-black)](https://github.com/Cecilia-Nascimento)
