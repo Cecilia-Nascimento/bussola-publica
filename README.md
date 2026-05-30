@@ -63,8 +63,8 @@ n8n (relatório semanal por email)
 ### Tabelas fato
 | Tabela | Descrição | Registros |
 |--------|-----------|-----------|
-| `proposicoes` | Projetos de lei e proposições | 14.277 |
-| `votacoes` | Votações em plenário e comissões | 1.741 |
+| `proposicoes` | Projetos de lei e proposições | 37.807 |
+| `votacoes` | Votações em plenário e comissões | 1.600 |
 
 ### Colunas geradas por IA
 - `tema` — classificação temática via embeddings
