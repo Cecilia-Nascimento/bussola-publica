@@ -13,6 +13,7 @@
 ## 🌐 Links do Projeto
 
 🔗 **Frontend interativo:** https://compass-legislative.lovable.app  
+🔗 **Repositório:** https://github.com/Cecilia-Nascimento/bussola-publica  
 🔗 **Banco de dados:** https://supabase.com/dashboard/project/cbaakbwnwqnelqtdwley
 
 ---
@@ -77,10 +78,17 @@ n8n (relatório semanal por email)
 - Modelo: `text-embedding-3-small` (OpenAI)
 - Temas: Saúde, Tributário, Tecnologia, Trabalho, Meio Ambiente, Educação, Segurança Pública, Economia, Infraestrutura, Outros
 - Método: similaridade de cosseno entre embedding da ementa e embedding de cada tema
+- Resultado: coluna `tema` na tabela `proposicoes`
 
 ### Caminho B — Resumo executivo
 - Modelo: `gpt-4o-mini`
 - Prompt: resumo em 2 linhas em linguagem clara para executivos
+- Resultado: coluna `resumo_ia` na tabela `proposicoes`
+
+> **Nota técnica:** Por decisão de custo controlado, 3.500 das 37.807 proposições
+> foram classificadas por IA nesta versão acadêmica. O script é idempotente —
+> execuções futuras classificam apenas o que ainda não foi processado,
+> permitendo escala gradual conforme budget disponível.
 
 ---
 
@@ -96,16 +104,22 @@ Workflow: **Bússola Pública — Alerta Semanal**
 
 ## 🖥️ Frontend
 
-Interface web construída com React 19, TanStack Router e Shadcn UI — conectada ao Supabase em tempo real.
+Interface web completa construída com React 19, TanStack Router e Shadcn UI.
+Conectada ao Supabase em tempo real — dados ao vivo do banco PostgreSQL.
 
 🔗 **Demo online:** https://compass-legislative.lovable.app
 
 **Páginas disponíveis:**
-- Dashboard com métricas e gráficos ao vivo
-- Proposições com filtros por tema e tipo
-- Deputados com fotos e perfis reais
-- Chatbot legislativo com OpenAI
-- Pipeline, Modelo de Dados, Camada de IA e Automação n8n documentados
+- Home — visão geral do projeto e métricas
+- Dashboard — KPIs, gráficos de temas e partidos ao vivo
+- Proposições — tabela filtrável com tema e resumo IA
+- Deputados — 513 deputados com fotos e perfis reais
+- Chatbot IA — perguntas em linguagem natural sobre legislação
+- Pipeline — arquitetura técnica detalhada
+- Modelo de Dados — estrutura das tabelas
+- Camada de IA — embeddings e resumos
+- Automação n8n — workflow semanal
+- Apresentação — pitch completo do projeto
 
 ### Rodar o frontend localmente
 
@@ -115,6 +129,13 @@ npm install
 npm run dev
 # Acesse: http://localhost:8080
 ```
+
+**Stack do frontend:**
+- React 19 + TanStack Router
+- Shadcn UI + Tailwind CSS
+- Recharts para gráficos
+- Supabase JS para dados em tempo real
+- OpenAI para chatbot legislativo
 
 ---
 
