@@ -92,6 +92,18 @@ n8n (relatório semanal por email)
 
 ---
 
+### 🤖 Chatbot IA
+
+O chatbot usa a API da OpenAI (GPT-4o-mini). Para usar:
+1. Acesse https://platform.openai.com/api-keys
+2. Crie uma chave gratuita
+3. Cole no campo "Chave OpenAI" no site
+4. A chave fica salva no navegador automaticamente
+
+> A chave não é armazenada em servidores — fica apenas no localStorage do seu navegador.
+
+---
+
 ## ⚙️ Automação n8n
 
 Workflow: **Bússola Pública — Alerta Semanal**
