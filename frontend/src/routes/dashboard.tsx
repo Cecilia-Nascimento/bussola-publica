@@ -2,12 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { FileText, Users, Vote, Database, Sparkles, Clock } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
-  LineChart, Line, CartesianGrid, Legend,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid, Legend,
 } from "recharts";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
-import { VOTACOES_STATUS, EVOLUCAO_MENSAL } from "@/lib/mock-data";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/dashboard")({
@@ -52,69 +50,88 @@ function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-md bg-muted/40 ${className}`} />;
 }
 
-type TemaRow = { nome: string; total: number };
+type TemaRow    = { nome: string; total: number };
 type PartidoRow = { sigla: string; deputados: number };
+type TipoRow    = { tipo: string; total: number };
+type VotacaoRow = { status: string; total: number };
 
 function Dashboard() {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ proposicoes: 0, deputados: 0, votacoes: 0, classificadas: 0 });
-  const [temas, setTemas] = useState<TemaRow[]>([]);
+  const [stats, setStats]     = useState({ proposicoes: 0, deputados: 0, votacoes: 0, classificadas: 0 });
+  const [temas, setTemas]     = useState<TemaRow[]>([]);
   const [partidos, setPartidos] = useState<PartidoRow[]>([]);
+  const [tipos, setTipos]     = useState<TipoRow[]>([]);
+  const [votStatus, setVotStatus] = useState<VotacaoRow[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [propCount, depCount, votCount, classCount, temasRes, depsRes] = await Promise.all([
+
+      const [propCount, depCount, votCount, classCount, temasRes, depsRes, tiposRes, votRes] = await Promise.all([
         supabase.from("proposicoes").select("*", { count: "exact", head: true }),
         supabase.from("deputados").select("*", { count: "exact", head: true }),
         supabase.from("votacoes").select("*", { count: "exact", head: true }),
         supabase.from("proposicoes").select("*", { count: "exact", head: true }).not("tema", "is", null),
         supabase.from("proposicoes").select("tema").not("tema", "is", null),
         supabase.from("deputados").select("sigla_partido"),
+        supabase.from("proposicoes").select("sigla_tipo").not("sigla_tipo", "is", null),
+        supabase.from("votacoes").select("aprovacao"),
       ]);
 
       if (cancelled) return;
 
       setStats({
-        proposicoes: propCount.count ?? 0,
-        deputados: depCount.count ?? 0,
-        votacoes: votCount.count ?? 0,
+        proposicoes:  propCount.count ?? 0,
+        deputados:    depCount.count ?? 0,
+        votacoes:     votCount.count ?? 0,
         classificadas: classCount.count ?? 0,
       });
 
+      // Temas
       const temaMap = ((temasRes.data ?? []) as { tema: string | null }[]).reduce<Record<string, number>>((acc, r) => {
         const k = (r.tema ?? "").trim();
         if (!k) return acc;
         acc[k] = (acc[k] ?? 0) + 1;
         return acc;
       }, {});
-      setTemas(
-        Object.entries(temaMap)
-          .map(([nome, total]) => ({ nome, total }))
-          .sort((a, b) => b.total - a.total)
-      );
+      setTemas(Object.entries(temaMap).map(([nome, total]) => ({ nome, total })).sort((a, b) => b.total - a.total));
 
+      // Partidos
       const partidoMap = ((depsRes.data ?? []) as { sigla_partido: string | null }[]).reduce<Record<string, number>>((acc, r) => {
         const k = (r.sigla_partido ?? "").trim();
         if (!k) return acc;
         acc[k] = (acc[k] ?? 0) + 1;
         return acc;
       }, {});
-      setPartidos(
-        Object.entries(partidoMap)
-          .map(([sigla, deputados]) => ({ sigla, deputados }))
-          .sort((a, b) => b.deputados - a.deputados)
-          .slice(0, 10)
-      );
+      setPartidos(Object.entries(partidoMap).map(([sigla, deputados]) => ({ sigla, deputados })).sort((a, b) => b.deputados - a.deputados).slice(0, 10));
+
+      // Tipos de proposição — dados reais
+      const tipoMap = ((tiposRes.data ?? []) as { sigla_tipo: string | null }[]).reduce<Record<string, number>>((acc, r) => {
+        const k = (r.sigla_tipo ?? "").trim();
+        if (!k) return acc;
+        acc[k] = (acc[k] ?? 0) + 1;
+        return acc;
+      }, {});
+      setTipos(Object.entries(tipoMap).map(([tipo, total]) => ({ tipo, total })).sort((a, b) => b.total - a.total).slice(0, 8));
+
+      // Votações por resultado — dados reais
+      const aprovadas  = ((votRes.data ?? []) as { aprovacao: number | null }[]).filter(v => v.aprovacao === 1).length;
+      const rejeitadas = ((votRes.data ?? []) as { aprovacao: number | null }[]).filter(v => v.aprovacao === 0).length;
+      const outras     = ((votRes.data ?? []) as { aprovacao: number | null }[]).filter(v => v.aprovacao !== 0 && v.aprovacao !== 1).length;
+      setVotStatus([
+        { status: "Aprovadas",  total: aprovadas },
+        { status: "Rejeitadas", total: rejeitadas },
+        { status: "Outras",     total: outras },
+      ].filter(v => v.total > 0));
 
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, []);
 
-  const totalRegistros = stats.proposicoes + stats.deputados + stats.votacoes;
-  const pctClassificadas = stats.proposicoes ? Math.round((stats.classificadas / stats.proposicoes) * 100) : 0;
+  const totalRegistros    = stats.proposicoes + stats.deputados + stats.votacoes;
+  const pctClassificadas  = stats.proposicoes ? Math.round((stats.classificadas / stats.proposicoes) * 100) : 0;
 
   return (
     <div className="space-y-8">
@@ -125,25 +142,30 @@ function Dashboard() {
       />
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <StatCard label="Proposições" value={loading ? "…" : stats.proposicoes.toLocaleString("pt-BR")} icon={FileText} accent="primary" />
-        <StatCard label="Deputados ativos" value={loading ? "…" : stats.deputados.toLocaleString("pt-BR")} icon={Users} accent="success" />
-        <StatCard label="Votações" value={loading ? "…" : stats.votacoes.toLocaleString("pt-BR")} icon={Vote} accent="accent" />
-        <StatCard label="Registros totais" value={loading ? "…" : totalRegistros.toLocaleString("pt-BR")} icon={Database} accent="warning" />
+        <StatCard label="Proposições"        value={loading ? "…" : stats.proposicoes.toLocaleString("pt-BR")}  icon={FileText}  accent="primary" />
+        <StatCard label="Deputados ativos"   value={loading ? "…" : stats.deputados.toLocaleString("pt-BR")}    icon={Users}     accent="success" />
+        <StatCard label="Votações"           value={loading ? "…" : stats.votacoes.toLocaleString("pt-BR")}     icon={Vote}      accent="accent" />
+        <StatCard label="Registros totais"   value={loading ? "…" : totalRegistros.toLocaleString("pt-BR")}     icon={Database}  accent="warning" />
         <StatCard label="Classificadas por IA" value={loading ? "…" : stats.classificadas.toLocaleString("pt-BR")} hint={loading ? undefined : `${pctClassificadas}% do total`} icon={Sparkles} accent="accent" />
-        <StatCard label="Última atualização" value="06:00" hint="Hoje" icon={Clock} accent="primary" />
+        <StatCard label="Última atualização" value="06:00" hint="Toda segunda-feira" icon={Clock} accent="primary" />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
+
+        {/* Temas — dados reais */}
         <ChartCard title="Proposições por tema" subtitle="Classificação automática via embeddings">
-          {loading ? (
-            <Skeleton className="h-full w-full" />
-          ) : (
+          {loading ? <Skeleton className="h-full w-full" /> : (
             <ResponsiveContainer>
               <BarChart data={temas} margin={{ left: -10, right: 10, top: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.32 0.03 245 / 0.3)" />
                 <XAxis dataKey="nome" tick={{ fontSize: 10, fill: "oklch(0.68 0.025 240)" }} angle={-25} textAnchor="end" height={60} />
                 <YAxis tick={{ fontSize: 11, fill: "oklch(0.68 0.025 240)" }} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "oklch(0.72 0.16 240 / 0.08)" }} />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  cursor={{ fill: "oklch(0.72 0.16 240 / 0.08)" }}
+                  labelStyle={{ color: "oklch(0.97 0.01 230)" }}
+                  itemStyle={{ color: "oklch(0.97 0.01 230)" }}
+                />
                 <Bar dataKey="total" radius={[6, 6, 0, 0]}>
                   {temas.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                 </Bar>
@@ -152,45 +174,80 @@ function Dashboard() {
           )}
         </ChartCard>
 
-        <ChartCard title="Evolução mensal de proposições" subtitle="Últimos 11 meses">
-          <ResponsiveContainer>
-            <LineChart data={EVOLUCAO_MENSAL}>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.32 0.03 245 / 0.3)" />
-              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: "oklch(0.68 0.025 240)" }} />
-              <YAxis tick={{ fontSize: 11, fill: "oklch(0.68 0.025 240)" }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="total" stroke="oklch(0.72 0.16 240)" strokeWidth={3} dot={{ fill: "oklch(0.68 0.18 290)", r: 4 }} activeDot={{ r: 6 }} />
-            </LineChart>
-          </ResponsiveContainer>
+        {/* Tipos de proposição — dados reais */}
+        <ChartCard title="Proposições por tipo" subtitle="Distribuição por categoria legislativa">
+          {loading ? <Skeleton className="h-full w-full" /> : (
+            <ResponsiveContainer>
+              <BarChart data={tipos} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.32 0.03 245 / 0.3)" />
+                <XAxis
+                  type="number"
+                  scale="log"
+                  domain={[1, 'auto']}
+                  tick={{ fontSize: 11, fill: "oklch(0.68 0.025 240)" }}
+                  tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="tipo"
+                  tick={{ fontSize: 11, fill: "oklch(0.97 0.01 230)" }}
+                  width={50}
+                />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  cursor={{ fill: "oklch(0.72 0.16 240 / 0.08)" }}
+                  formatter={(value) => [value, "Total"]}
+                  labelStyle={{ color: "oklch(0.97 0.01 230)" }}
+                  itemStyle={{ color: "oklch(0.97 0.01 230)" }}
+                />
+                <Bar dataKey="total" radius={[0, 6, 6, 0]}>
+                  {tipos.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </ChartCard>
 
+        {/* Deputados por partido — dados reais */}
         <ChartCard title="Deputados por partido" subtitle="Top 10 bancadas">
-          {loading ? (
-            <Skeleton className="h-full w-full" />
-          ) : (
+          {loading ? <Skeleton className="h-full w-full" /> : (
             <ResponsiveContainer>
               <BarChart data={partidos} layout="vertical" margin={{ left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.32 0.03 245 / 0.3)" />
                 <XAxis type="number" tick={{ fontSize: 11, fill: "oklch(0.68 0.025 240)" }} />
                 <YAxis type="category" dataKey="sigla" tick={{ fontSize: 11, fill: "oklch(0.68 0.025 240)" }} width={80} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "oklch(0.72 0.16 240 / 0.08)" }} />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  cursor={{ fill: "oklch(0.72 0.16 240 / 0.08)" }}
+                  labelStyle={{ color: "oklch(0.97 0.01 230)" }}
+                  itemStyle={{ color: "oklch(0.97 0.01 230)" }}
+                />
                 <Bar dataKey="deputados" fill="oklch(0.72 0.17 160)" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </ChartCard>
 
-        <ChartCard title="Votações por status" subtitle="Distribuição percentual">
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie data={VOTACOES_STATUS} dataKey="total" nameKey="status" innerRadius={55} outerRadius={90} paddingAngle={3}>
-                {VOTACOES_STATUS.map((_, i) => <Cell key={i} fill={CHART_COLORS[i]} />)}
-              </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend wrapperStyle={{ fontSize: 11, color: "oklch(0.68 0.025 240)" }} />
-            </PieChart>
-          </ResponsiveContainer>
+        {/* Votações por resultado — dados reais */}
+        <ChartCard title="Votações por resultado" subtitle="Distribuição percentual — dados reais">
+          {loading ? <Skeleton className="h-full w-full" /> : (
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie data={votStatus} dataKey="total" nameKey="status" innerRadius={55} outerRadius={90} paddingAngle={3}>
+                  {votStatus.map((_, i) => <Cell key={i} fill={CHART_COLORS[i]} />)}
+                </Pie>
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  cursor={{ fill: "oklch(0.72 0.16 240 / 0.08)" }}
+                  labelStyle={{ color: "oklch(0.97 0.01 230)" }}
+                  itemStyle={{ color: "oklch(0.97 0.01 230)" }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11, color: "oklch(0.68 0.025 240)" }} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </ChartCard>
+
       </section>
     </div>
   );

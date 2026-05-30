@@ -29,7 +29,7 @@ const tables: { nome: string; tipo: "Dimensão" | "Fato"; registros: number; col
     ],
   },
   {
-    nome: "proposicoes", tipo: "Fato", registros: 14277,
+    nome: "proposicoes", tipo: "Fato", registros: 37807,
     cols: [
       { nome: "id_proposicao", tipo: "bigint", pk: true },
       { nome: "id_autor", tipo: "bigint", fk: true },
@@ -42,7 +42,7 @@ const tables: { nome: string; tipo: "Dimensão" | "Fato"; registros: number; col
     ],
   },
   {
-    nome: "votacoes", tipo: "Fato", registros: 1741,
+    nome: "votacoes", tipo: "Fato", registros: 1600,
     cols: [
       { nome: "id_votacao", tipo: "bigint", pk: true },
       { nome: "id_proposicao", tipo: "bigint", fk: true },

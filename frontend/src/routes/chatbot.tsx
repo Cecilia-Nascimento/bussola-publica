@@ -59,38 +59,59 @@ const suggestions = [
 ];
 
 const fakeAnswers: Record<string, string> = {
-  saúde: "Foram apresentadas 2.145 proposições de Saúde, com destaque para a PL 1234/2025 (telemedicina rural) e PL 2055/2025 (isenção de medicamentos de alto custo).",
-  partidos: "As três maiores bancadas atualmente são PL (92), PT (68) e União Brasil (59 deputados).",
-  tributárias: "Existem 1.832 proposições tributárias. Em destaque: PL 0987/2025 cria CIDE-Digital de 3% sobre big techs estrangeiras.",
-  votações: "Das 1.741 votações registradas, 1.024 foram aprovadas (~58%). A mais recente aprovada trata da CIDE-Digital.",
+  saúde: "Foram apresentadas proposições de Saúde no banco. Conecte uma chave OpenAI para ver os detalhes reais.",
+  partidos: "As três maiores bancadas são PL, PT e União Brasil. Conecte uma chave OpenAI para ver os números reais.",
+  tributárias: "Existem proposições tributárias no banco. Conecte uma chave OpenAI para ver os detalhes.",
+  votações: "Das votações registradas, a maioria foi aprovada. Conecte uma chave OpenAI para ver os números reais.",
 };
 
 function answerFor(q: string) {
   const lower = q.toLowerCase();
   for (const k of Object.keys(fakeAnswers)) if (lower.includes(k)) return fakeAnswers[k];
-  return "Esta é uma resposta simulada. Conecte uma chave OpenAI para obter respostas contextualizadas em tempo real a partir dos 16.552 registros do banco.";
+  return "Esta é uma resposta simulada. Conecte uma chave OpenAI para obter respostas contextualizadas em tempo real a partir dos 39.920 registros do banco.";
 }
 
 function Chatbot() {
   const [messages, setMessages] = useState<Msg[]>([
     { role: "assistant", content: "Olá! Sou o assistente da Bússola Pública. Posso responder sobre proposições, deputados, partidos e votações da Câmara. O que você quer saber hoje?" },
   ]);
-  const [input, setInput] = useState("");
-  const [apiKey, setApiKey] = useState("");
+  const [input, setInput]     = useState("");
+  const [apiKey, setApiKey]   = useState(() => {
+    try { return localStorage.getItem("oai_key") ?? ""; }
+    catch { return ""; }
+  });
   const [loading, setLoading] = useState(false);
-  const endRef = useRef<HTMLDivElement>(null);
+  const endRef                = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+  // Lê pergunta vinda da página de deputados
+  useEffect(() => {
+    const pergunta = sessionStorage.getItem("chatbot_pergunta");
+    if (pergunta) {
+      sessionStorage.removeItem("chatbot_pergunta");
+      send(pergunta);
+    }
+  }, []);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  function saveApiKey(value: string) {
+    setApiKey(value);
+    try { localStorage.setItem("oai_key", value); } catch {}
+  }
 
   const send = async (text: string) => {
     if (!text.trim() || loading) return;
     setMessages((m) => [...m, { role: "user", content: text }]);
     setInput("");
 
-    if (apiKey.trim()) {
+    const key = apiKey.trim() || (localStorage.getItem("oai_key") ?? "").trim();
+
+    if (key) {
       setLoading(true);
       try {
-        const resposta = await sendRealMessage(text, apiKey.trim());
+        const resposta = await sendRealMessage(text, key);
         setMessages((m) => [...m, { role: "assistant", content: resposta }]);
       } catch (err: any) {
         setMessages((m) => [...m, { role: "assistant", content: `Erro ao chamar OpenAI: ${err?.message || err}` }]);
@@ -122,7 +143,8 @@ function Chatbot() {
             <div className="flex-1">
               <h3 className="text-sm font-semibold">Assistente Bússola</h3>
               <div className="flex items-center gap-1.5 text-[10px] text-success">
-                <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" /> Online · GPT-4o-mini
+                <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+                {apiKey ? "Online · GPT-4o-mini" : "Modo simulado — adicione chave OpenAI"}
               </div>
             </div>
           </div>
@@ -156,8 +178,21 @@ function Chatbot() {
             className="border-t border-border/60 bg-background/40 p-3"
           >
             <div className="flex gap-2">
-              <Input placeholder="Pergunte sobre proposições, deputados, partidos..." value={input} onChange={(e) => setInput(e.target.value)} disabled={loading} className="bg-background/40" />
-              <Button type="submit" size="icon" disabled={loading} className="bg-gradient-primary text-primary-foreground border-0">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</Button>
+              <Input
+                placeholder="Pergunte sobre proposições, deputados, partidos..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                disabled={loading}
+                className="bg-background/40"
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={loading}
+                className="bg-gradient-primary text-primary-foreground border-0"
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
             </div>
           </form>
         </div>
@@ -165,9 +200,24 @@ function Chatbot() {
         {/* Sidebar */}
         <div className="space-y-4">
           <div className="glass rounded-2xl p-4 shadow-card">
-            <h4 className="flex items-center gap-2 text-sm font-semibold"><KeyRound className="h-4 w-4 text-warning" /> Chave OpenAI (opcional)</h4>
-            <Input type="password" placeholder="sk-..." value={apiKey} onChange={(e) => setApiKey(e.target.value)} className="mt-3 bg-background/40 text-xs" />
-            <p className="mt-2 text-[11px] text-muted-foreground">Sem chave, respostas são simuladas a partir de dados mockados.</p>
+            <h4 className="flex items-center gap-2 text-sm font-semibold">
+              <KeyRound className="h-4 w-4 text-warning" /> Chave OpenAI (opcional)
+            </h4>
+            <Input
+              type="password"
+              placeholder="sk-..."
+              value={apiKey}
+              onChange={(e) => saveApiKey(e.target.value)}
+              className="mt-3 bg-background/40 text-xs"
+            />
+            {apiKey && (
+              <p className="mt-2 text-[11px] text-success">✅ Chave salva — respostas reais ativadas</p>
+            )}
+            {!apiKey && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Sem chave, respostas são simuladas. Com chave, usa dados reais via GPT-4o-mini.
+              </p>
+            )}
           </div>
 
           <div className="glass rounded-2xl p-4 shadow-card">

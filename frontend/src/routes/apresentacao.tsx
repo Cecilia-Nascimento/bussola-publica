@@ -11,7 +11,7 @@ const sections = [
   { icon: AlertTriangle, accent: "text-warning", title: "Problema", body: "Acompanhar a produção legislativa da Câmara é custoso: 14k+ proposições/ano, em formato textual disperso, sem categorização temática nativa e sem priorização baseada em relevância." },
   { icon: Lightbulb, accent: "text-info", title: "Solução", body: "Pipeline automatizado que coleta dados oficiais, normaliza no PostgreSQL, classifica com IA por tema, gera resumos executivos e entrega um boletim semanal." },
   { icon: Workflow, accent: "text-primary", title: "Arquitetura", body: "Python (ingestão) → Pandas (transformação) → Supabase (storage) → OpenAI (IA) → n8n (orquestração) → Gmail (entrega). Tudo modular e versionado." },
-  { icon: TrendingUp, accent: "text-success", title: "Resultado", body: "16.552 registros consolidados, 12.834 proposições classificadas por IA, boletim semanal automático e dashboard analítico em produção." },
+{ icon: TrendingUp, accent: "text-success", title: "Resultado", body: "16.552 registros consolidados, 12.834 proposições classificadas por IA, boletim semanal automático e dashboard analítico em produção." },
   { icon: Heart, accent: "text-accent", title: "Impacto", body: "Democratiza o acesso à informação legislativa para pesquisadores, jornalistas, ONGs e cidadãos — reduzindo a barreira entre dado bruto e insight acionável." },
 ];
 

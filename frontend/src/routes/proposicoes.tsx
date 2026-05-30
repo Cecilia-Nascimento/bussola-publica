@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Filter, Eye, Sparkles } from "lucide-react";
+import { Search, Filter, Eye, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,8 @@ interface Proposicao {
   data_apresentacao: string;
 }
 
+const PER_PAGE = 20;
+
 function SkeletonRow() {
   return (
     <tr className="border-b border-border/30">
@@ -41,12 +43,13 @@ function SkeletonRow() {
 }
 
 function Proposicoes() {
-  const [tema, setTema] = useState("todos");
-  const [tipo, setTipo] = useState("todos");
-  const [q, setQ] = useState("");
+  const [tema, setTema]               = useState("todos");
+  const [tipo, setTipo]               = useState("todos");
+  const [q, setQ]                     = useState("");
   const [proposicoes, setProposicoes] = useState<Proposicao[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState("");
+  const [loading, setLoading]         = useState(true);
+  const [erro, setErro]               = useState("");
+  const [page, setPage]               = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,20 +59,18 @@ function Proposicoes() {
       .select("id, sigla_tipo, ementa, tema, resumo_ia, data_apresentacao")
       .not("tema", "is", null)
       .order("id", { ascending: false })
-      .limit(100)
+      .limit(3500)
       .then(({ data, error }) => {
         if (cancelled) return;
         setLoading(false);
-        if (error) {
-          setErro(error.message);
-          return;
-        }
+        if (error) { setErro(error.message); return; }
         setProposicoes((data as Proposicao[]) ?? []);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
+
+  // Reset página ao mudar filtros
+  useEffect(() => { setPage(1); }, [tema, tipo, q]);
 
   const temas = useMemo(
     () => [...new Set(proposicoes.map((p) => p.tema).filter(Boolean))].sort(),
@@ -85,27 +86,25 @@ function Proposicoes() {
     return proposicoes.filter((p) => {
       if (tema !== "todos" && p.tema !== tema) return false;
       if (tipo !== "todos" && p.sigla_tipo !== tipo) return false;
-      if (
-        q &&
-        !(
-          p.ementa.toLowerCase().includes(q.toLowerCase()) ||
-          String(p.id).toLowerCase().includes(q.toLowerCase())
-        )
-      )
-        return false;
+      if (q && !(
+        p.ementa.toLowerCase().includes(q.toLowerCase()) ||
+        String(p.id).includes(q)
+      )) return false;
       return true;
     });
   }, [tema, tipo, q, proposicoes]);
+
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const paginated  = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Acervo"
         title="Proposições"
-        description="Explore as proposições classificadas pela IA. Filtre por tema, tipo, palavra-chave ou autor."
+        description="Explore as proposições classificadas pela IA. Filtre por tema, tipo ou palavra-chave."
       />
 
-      {/* Filters */}
       <div className="glass rounded-2xl p-4 shadow-card">
         <div className="grid gap-3 md:grid-cols-4">
           <div className="relative md:col-span-2">
@@ -121,23 +120,21 @@ function Proposicoes() {
             <SelectTrigger className="bg-background/40"><SelectValue placeholder="Tema" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os temas</SelectItem>
-              {temas.map((t) => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
+              {temas.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={tipo} onValueChange={setTipo}>
             <SelectTrigger className="bg-background/40"><SelectValue placeholder="Tipo" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os tipos</SelectItem>
-              {tipos.map((t) => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
+              {tipos.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
         <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-          <Filter className="h-3 w-3" /> {filtered.length} de {proposicoes.length} proposições
+          <Filter className="h-3 w-3" />
+          {filtered.length} proposições encontradas
+          {filtered.length !== proposicoes.length && ` (de ${proposicoes.length} carregadas)`}
         </div>
       </div>
 
@@ -147,7 +144,6 @@ function Proposicoes() {
         </div>
       )}
 
-      {/* Table */}
       <div className="glass rounded-2xl shadow-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -164,67 +160,92 @@ function Proposicoes() {
             <tbody>
               {loading && Array.from({ length: 10 }).map((_, i) => <SkeletonRow key={i} />)}
 
-              {!loading &&
-                filtered.map((p) => (
-                  <tr key={p.id} className="border-b border-border/30 hover:bg-primary/5">
-                    <td className="px-4 py-3 font-mono text-xs">{p.id}</td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
-                        {p.sigla_tipo}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 max-w-md text-muted-foreground line-clamp-2">{p.ementa}</td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] text-accent">
-                        {p.tema}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">
-                      {p.data_apresentacao ? new Date(p.data_apresentacao).toLocaleDateString("pt-BR") : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button size="sm" variant="ghost"><Eye className="h-4 w-4" /></Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle className="font-mono">{p.id}</DialogTitle>
-                            <DialogDescription>
-                              Tipo: {p.sigla_tipo} · Tema: {p.tema}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 text-sm">
-                            <div>
-                              <p className="text-xs uppercase tracking-wider text-muted-foreground">Ementa</p>
-                              <p className="mt-1">{p.ementa}</p>
-                            </div>
+              {!loading && paginated.map((p) => (
+                <tr key={p.id} className="border-b border-border/30 hover:bg-primary/5">
+                  <td className="px-4 py-3 font-mono text-xs">{p.id}</td>
+                  <td className="px-4 py-3">
+                    <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+                      {p.sigla_tipo}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 max-w-md text-muted-foreground line-clamp-2">{p.ementa}</td>
+                  <td className="px-4 py-3">
+                    <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] text-accent">
+                      {p.tema}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {p.data_apresentacao ? new Date(p.data_apresentacao).toLocaleDateString("pt-BR") : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="ghost"><Eye className="h-4 w-4" /></Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="font-mono">{p.id}</DialogTitle>
+                          <DialogDescription>Tipo: {p.sigla_tipo} · Tema: {p.tema}</DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 text-sm">
+                          <div>
+                            <p className="text-xs uppercase tracking-wider text-muted-foreground">Ementa</p>
+                            <p className="mt-1">{p.ementa}</p>
+                          </div>
+                          {p.resumo_ia && (
                             <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
                               <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-accent">
                                 <Sparkles className="h-3 w-3" /> Resumo gerado por IA
                               </p>
                               <p className="mt-2">{p.resumo_ia}</p>
                             </div>
-                            <div className="flex gap-4 text-xs">
-                              <div>
-                                <span className="text-muted-foreground">Data:</span>{" "}
-                                {p.data_apresentacao
-                                  ? new Date(p.data_apresentacao).toLocaleDateString("pt-BR")
-                                  : "—"}
-                              </div>
-                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground">
+                            Data: {p.data_apresentacao ? new Date(p.data_apresentacao).toLocaleDateString("pt-BR") : "—"}
                           </div>
-                        </DialogContent>
-                      </Dialog>
-                    </td>
-                  </tr>
-                ))}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </td>
+                </tr>
+              ))}
+
               {!loading && filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">Nenhuma proposição encontrada com os filtros atuais.</td></tr>
+                <tr>
+                  <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                    Nenhuma proposição encontrada com os filtros atuais.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Paginação */}
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-border/30 px-4 py-3">
+            <span className="text-xs text-muted-foreground">
+              Página {page} de {totalPages} — {filtered.length} resultados
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm" variant="ghost"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-xs">{page}</span>
+              <Button
+                size="sm" variant="ghost"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
