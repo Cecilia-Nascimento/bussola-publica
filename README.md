@@ -108,7 +108,7 @@ O chatbot usa a API da OpenAI (GPT-4o-mini). Para usar:
 
 Workflow: **Bússola Pública — Alerta Semanal**
 
-![Workflow n8n](docs/n8n_workflow.png)
+![Workflow n8n](docs/docsn8n_workflow.png)
 
 - **Gatilho:** toda segunda-feira às 6h
 - **Passo 1:** query SQL no Supabase buscando 5 proposições com tema e resumo
@@ -197,6 +197,7 @@ python src/ai_layer.py
 
 ## 📁 Estrutura do Projeto
 
+```
 bussola-publica/
 │
 ├── data/
@@ -225,8 +226,7 @@ bussola-publica/
 ├── .env.example
 ├── requirements.txt
 └── README.md
-
----
+```
 
 ## 🔧 Decisões Técnicas
 
