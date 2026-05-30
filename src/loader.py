@@ -144,7 +144,7 @@ def verify_load(engine):
 if __name__ == "__main__":
 
     logger.info("=" * 55)
-    logger.info("BÚSSOLA PÚBLICA — Iniciando carga no PostgreSQL")
+    logger.info("BÚSSOLA PÚBLICA — Carga no PostgreSQL")
     logger.info("=" * 55)
 
     engine = get_engine()
@@ -152,20 +152,31 @@ if __name__ == "__main__":
     # 1. Criar tabelas
     create_tables(engine)
 
-    # 2. Transformar dados
+    # 2. Dimensões — replace (sempre limpas)
     df_dep  = transform_deputados()
     df_part = transform_partidos()
+    load_table(df_dep,  "deputados", engine, if_exists="replace")
+    load_table(df_part, "partidos",  engine, if_exists="replace")
+
+    # 3. Proposições — replace com dados novos
     df_prop = transform_proposicoes()
-    df_vot  = transform_votacoes()
+    load_table(df_prop, "proposicoes", engine, if_exists="replace")
 
-    # 3. Carregar no banco
-    # Dimensões primeiro, depois fatos
-    load_table(df_part, "partidos",    engine)
-    load_table(df_dep,  "deputados",   engine)
-    load_table(df_prop, "proposicoes", engine)
-    load_table(df_vot,  "votacoes",    engine)
+    # 4. Votações — replace com dados novos
+    df_vot = transform_votacoes()
+    load_table(df_vot, "votacoes", engine, if_exists="replace")
 
-    # 4. Verificar
+    # 5. Garantir colunas de IA
+    with engine.connect() as conn:
+        conn.execute(text(
+            "ALTER TABLE proposicoes ADD COLUMN IF NOT EXISTS tema VARCHAR(100)"
+        ))
+        conn.execute(text(
+            "ALTER TABLE proposicoes ADD COLUMN IF NOT EXISTS resumo_ia TEXT"
+        ))
+        conn.commit()
+
+    # 6. Verificar
     verify_load(engine)
 
     logger.info("Carga concluída com sucesso!")

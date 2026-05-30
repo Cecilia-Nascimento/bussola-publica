@@ -160,80 +160,81 @@ def estimate_cost(n_proposicoes: int) -> None:
 if __name__ == "__main__":
 
     logger.info("=" * 55)
-    logger.info("BÚSSOLA PÚBLICA — Iniciando camada de IA")
+    logger.info("BÚSSOLA PÚBLICA — Camada de IA")
     logger.info("=" * 55)
 
-    # Conexão com o banco
     engine = create_engine(os.getenv("DATABASE_URL"))
 
-    # Carregar proposições do banco
-    df = pd.read_sql("SELECT id, ementa FROM proposicoes LIMIT 20", engine)
-    logger.info(f"Proposições carregadas para teste: {len(df)}")
+    # Busca apenas proposições sem tema
+    # Idempotente — roda quantas vezes quiser sem reprocessar
+    df = pd.read_sql("""
+        SELECT id, ementa
+        FROM proposicoes
+        WHERE tema IS NULL
+        AND ementa IS NOT NULL
+        AND length(ementa) > 20
+        ORDER BY id DESC
+    """, engine)
 
-    # Estimar custo antes de rodar tudo
+    logger.info(f"Proposições sem tema: {len(df)}")
+
+    # Estimar custo
     estimate_cost(len(df))
 
-    # ── Passo 1: Gerar embeddings dos temas ──────────────────
+    # Confirmação de segurança
+    resposta = input(f"\nDeseja classificar {len(df)} proposições? (s/n): ")
+    if resposta.lower() != 's':
+        logger.info("Operação cancelada.")
+        exit()
+
+    # Embeddings dos temas
     logger.info("Gerando embeddings dos temas...")
     temas_embeddings = {}
     for tema, descricao in TEMAS.items():
         temas_embeddings[tema] = get_embedding(descricao)
-        logger.info(f"  ✅ Tema '{tema}' processado")
+        logger.info(f"  ✅ {tema}")
 
-    # ── Passo 2: Classificar proposições ─────────────────────
-    logger.info("Classificando proposições por tema...")
-    temas_resultado = []
+    # Processar em lotes de 50
+    LOTE = 50
+    total = len(df)
+    processados = 0
 
-    for i, row in df.iterrows():
-        tema = classify_tema(row["ementa"], temas_embeddings)
-        temas_resultado.append(tema)
-        logger.info(f"  [{i+1}/{len(df)}] {tema} | {row['ementa'][:60]}...")
-        time.sleep(0.1)   # evitar rate limit
+    for inicio in range(0, total, LOTE):
+        lote = df.iloc[inicio:inicio + LOTE]
+        resultados = []
 
-    df["tema"] = temas_resultado
-
-    # ── Passo 3: Gerar resumos executivos ────────────────────
-    logger.info("Gerando resumos executivos...")
-    resumos = []
-
-    for i, row in df.iterrows():
-        resumo = generate_resumo(row["ementa"])
-        resumos.append(resumo)
-        logger.info(f"  [{i+1}/{len(df)}] Resumo gerado")
-        time.sleep(0.2)
-
-    df["resumo_ia"] = resumos
-
-    # ── Passo 4: Salvar no banco ──────────────────────────────
-    logger.info("Salvando resultados no banco...")
-
-    with engine.connect() as conn:
-        for _, row in df.iterrows():
-            conn.execute(text("""
-                UPDATE proposicoes
-                SET tema      = :tema,
-                    resumo_ia = :resumo
-                WHERE id = :id
-            """), {
-                "tema":   row["tema"],
-                "resumo": row["resumo_ia"],
-                "id":     row["id"]
+        for _, row in lote.iterrows():
+            tema   = classify_tema(row["ementa"], temas_embeddings)
+            resumo = generate_resumo(row["ementa"])
+            resultados.append({
+                "id":     row["id"],
+                "tema":   tema,
+                "resumo": resumo
             })
-        conn.commit()
 
-    logger.info("✅ Temas e resumos salvos no banco!")
+        # Reconecta a cada lote — evita timeout do Supabase
+        try:
+            with engine.connect() as conn:
+                for r in resultados:
+                    conn.execute(text("""
+                        UPDATE proposicoes
+                        SET tema = :tema, resumo_ia = :resumo
+                        WHERE id = :id
+                    """), r)
+                    processados += 1
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Erro ao salvar lote {inicio//LOTE + 1}: {e}")
+            logger.info("Tentando reconectar...")
+            engine.dispose()
+            continue
 
-    # ── Passo 5: Mostrar resultado ────────────────────────────
-    print("\n=== RESULTADO DA CLASSIFICAÇÃO ===")
-    for _, row in df.iterrows():
-        print(f"\n📋 ID: {row['id']}")
-        print(f"   Tema:   {row['tema']}")
-        print(f"   Ementa: {row['ementa'][:80]}...")
-        print(f"   Resumo: {row['resumo_ia']}")
-
-    print("\n=== DISTRIBUIÇÃO POR TEMA ===")
-    print(df["tema"].value_counts().to_string())
+        logger.info(
+            f"  Lote {inicio//LOTE + 1} — "
+            f"{processados}/{total} processados "
+            f"({round(processados/total*100)}%)"
+        )
 
     logger.info("=" * 55)
-    logger.info("Camada de IA concluída!")
+    logger.info(f"Concluído! {processados} proposições classificadas")
     logger.info("=" * 55)

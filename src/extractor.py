@@ -145,39 +145,36 @@ def save_raw(data: list, name: str) -> str:
 if __name__ == "__main__":
 
     logger.info("=" * 55)
-    logger.info("BÚSSOLA PÚBLICA — Iniciando extração")
+    logger.info("BÚSSOLA PÚBLICA — Extração últimos 6 meses")
     logger.info("=" * 55)
 
-    # 1. Deputados — sem filtro de data, extrai todos
+    # Dimensões — deputados e partidos
     deputados = extract_endpoint("/deputados")
     save_raw(deputados, "deputados")
 
-    # 2. Partidos — sem filtro de data, extrai todos
     partidos = extract_endpoint("/partidos")
     save_raw(partidos, "partidos")
 
-    # 3. Proposições — últimos 30 dias
-    # ⚠️ Comece com 30 dias. Depois que o pipeline estiver
-    #    funcionando, aumente o range gradualmente.
+    # Proposições — últimos 3 meses
     proposicoes = extract_endpoint(
         endpoint="/proposicoes",
         extra_params={
-            "dataInicio": "2024-11-01",
-            "dataFim":    "2024-11-30",
+            "dataInicio": "2026-03-01",
+            "dataFim":    "2026-05-29",
         }
     )
-    save_raw(proposicoes, "proposicoes")
+    save_raw(proposicoes, "proposicoes_3meses")
 
-    # 4. Votações — últimos 30 dias
+    # Votações — últimos 3 meses
     votacoes = extract_endpoint(
         endpoint="/votacoes",
         extra_params={
-            "dataInicio": "2024-11-01",
-            "dataFim":    "2024-11-30",
+            "dataInicio": "2026-03-01",
+            "dataFim":    "2026-05-29",
         }
     )
-    save_raw(votacoes, "votacoes")
+    save_raw(votacoes, "votacoes_3meses")
 
     logger.info("=" * 55)
-    logger.info("Extração concluída com sucesso!")
+    logger.info("Extração concluída!")
     logger.info("=" * 55)
