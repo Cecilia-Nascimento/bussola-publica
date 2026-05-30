@@ -108,6 +108,8 @@ O chatbot usa a API da OpenAI (GPT-4o-mini). Para usar:
 
 Workflow: **Bússola Pública — Alerta Semanal**
 
+![Workflow n8n](docs/n8n_workflow.png)
+
 - **Gatilho:** toda segunda-feira às 6h
 - **Passo 1:** query SQL no Supabase buscando 5 proposições com tema e resumo
 - **Passo 2:** envio de email HTML formatado via Gmail
