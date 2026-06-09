@@ -16,6 +16,7 @@
 🔗 **Repositório:** https://github.com/Cecilia-Nascimento/bussola-publica  
 🔗 **Banco de dados:** https://supabase.com/dashboard/project/cbaakbwnwqnelqtdwley
 
+> **Período dos dados:** maio/2026 — dados completos com 5 tabelas
 ---
 
 ## 📋 Sobre o Projeto
@@ -44,7 +45,7 @@ JSONs brutos (data/raw/)
 ↓
 Transformação Pandas (normalização + validação)
 ↓
-PostgreSQL Supabase (deputados, partidos, proposicoes, votacoes)
+PostgreSQL Supabase (deputados, partidos, proposicoes, votacoes, despesas)
 ↓
 Camada de IA (embeddings + resumos OpenAI)
 ↓
@@ -125,7 +126,7 @@ Conectada ao Supabase em tempo real — dados ao vivo do banco PostgreSQL.
 - Home — visão geral do projeto e métricas
 - Dashboard — KPIs, gráficos de temas e partidos ao vivo
 - Proposições — tabela filtrável com tema e resumo IA
-- Deputados — 513 deputados com fotos e perfis reais
+- Deputados — 512 deputados com fotos e perfis reais
 - Chatbot IA — perguntas em linguagem natural sobre legislação
 - Pipeline — arquitetura técnica detalhada
 - Modelo de Dados — estrutura das tabelas
@@ -233,6 +234,9 @@ PostgreSQL gerenciado na nuvem com plano gratuito generoso, painel visual e fác
 
 **Por que salvar JSON bruto antes de transformar?**
 Separar extração de transformação garante que, se o código de transformar quebrar, não é necessário refazer a chamada à API.
+
+**Por que incluir despesas parlamentares?**
+Despesas da cota parlamentar completam o modelo dimensional — permitem análise de gastos por deputado, partido e tipo de despesa. Integradas ao perfil de cada deputado e ao contexto do chatbot.
 
 **Por que embeddings para classificação de tema?**
 Classificação semântica é mais robusta que keywords — captura contexto mesmo quando as palavras exatas do tema não aparecem na ementa.
