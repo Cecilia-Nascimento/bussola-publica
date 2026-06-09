@@ -19,6 +19,30 @@ async function sendRealMessage(texto: string, apiKey: string): Promise<string> {
     .select("nome, sigla_partido, sigla_uf")
     .limit(20);
 
+  const { data: desps } = await supabase
+    .from("despesas")
+    .select("id_deputado, tipo_despesa, valor_liquido")
+    .limit(50);
+
+  const { data: depNomes } = await supabase
+    .from("deputados")
+    .select("id, nome")
+    .limit(50);
+
+  const depMap: Record<number, string> = {};
+  (depNomes || []).forEach((d: any) => { depMap[d.id] = d.nome; });
+
+  const despMap: Record<string, number> = {};
+  (desps || []).forEach((d: any) => {
+    const nome = depMap[d.id_deputado] || `Deputado ${d.id_deputado}`;
+    despMap[nome] = (despMap[nome] || 0) + d.valor_liquido;
+  });
+
+  const topGastos = Object.entries(despMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([nome, total]) => `${nome}: R$ ${total.toFixed(2)}`);
+
   const contexto = `Você é assistente de inteligência legislativa da Bússola Pública.
 Responda em português, de forma clara e objetiva.
 
@@ -27,6 +51,9 @@ ${(props || []).map((p: any) => `[${p.tema}] ${p.sigla_tipo} ${p.id}: ${(p.ement
 
 DEPUTADOS (amostra):
 ${(deps || []).map((d: any) => `${d.nome} (${d.sigla_partido}/${d.sigla_uf})`).join(', ')}
+
+DESPESAS PARLAMENTARES — maio/2026 (top 5 por gasto total):
+${topGastos.join('\n')}
 
 Pergunta: ${texto}`;
 
@@ -56,6 +83,7 @@ const suggestions = [
   "Quais partidos têm mais deputados?",
   "Resumo das proposições tributárias",
   "Quais votações recentes foram aprovadas?",
+  "Quem gastou mais da cota parlamentar em maio?",
 ];
 
 const fakeAnswers: Record<string, string> = {
@@ -63,17 +91,18 @@ const fakeAnswers: Record<string, string> = {
   partidos: "As três maiores bancadas são PL, PT e União Brasil. Conecte uma chave OpenAI para ver os números reais.",
   tributárias: "Existem proposições tributárias no banco. Conecte uma chave OpenAI para ver os detalhes.",
   votações: "Das votações registradas, a maioria foi aprovada. Conecte uma chave OpenAI para ver os números reais.",
+  cota: "Conecte uma chave OpenAI para ver os deputados que mais gastaram da cota parlamentar em maio/2026.",
 };
 
 function answerFor(q: string) {
   const lower = q.toLowerCase();
   for (const k of Object.keys(fakeAnswers)) if (lower.includes(k)) return fakeAnswers[k];
-  return "Esta é uma resposta simulada. Conecte uma chave OpenAI para obter respostas contextualizadas em tempo real a partir dos 39.920 registros do banco.";
+  return "Esta é uma resposta simulada. Conecte uma chave OpenAI para obter respostas contextualizadas em tempo real a partir dos 25.117 registros do banco.";
 }
 
 function Chatbot() {
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "Olá! Sou o assistente da Bússola Pública. Posso responder sobre proposições, deputados, partidos e votações da Câmara. O que você quer saber hoje?" },
+    { role: "assistant", content: "Olá! Sou o assistente da Bússola Pública. Posso responder sobre proposições, deputados, votações e despesas parlamentares de maio/2026. O que você quer saber hoje?" },
   ]);
   const [input, setInput]     = useState("");
   const [apiKey, setApiKey]   = useState(() => {
@@ -83,7 +112,6 @@ function Chatbot() {
   const [loading, setLoading] = useState(false);
   const endRef                = useRef<HTMLDivElement>(null);
 
-  // Lê pergunta vinda da página de deputados
   useEffect(() => {
     const pergunta = sessionStorage.getItem("chatbot_pergunta");
     if (pergunta) {
@@ -134,7 +162,6 @@ function Chatbot() {
       />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
-        {/* Chat */}
         <div className="glass flex h-[600px] flex-col rounded-2xl shadow-card overflow-hidden">
           <div className="flex items-center gap-3 border-b border-border/60 bg-background/40 p-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-primary">
@@ -179,7 +206,7 @@ function Chatbot() {
           >
             <div className="flex gap-2">
               <Input
-                placeholder="Pergunte sobre proposições, deputados, partidos..."
+                placeholder="Pergunte sobre proposições, deputados, despesas..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 disabled={loading}
@@ -197,7 +224,6 @@ function Chatbot() {
           </form>
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-4">
           <div className="glass rounded-2xl p-4 shadow-card">
             <h4 className="flex items-center gap-2 text-sm font-semibold">
@@ -210,10 +236,9 @@ function Chatbot() {
               onChange={(e) => saveApiKey(e.target.value)}
               className="mt-3 bg-background/40 text-xs"
             />
-            {apiKey && (
+            {apiKey ? (
               <p className="mt-2 text-[11px] text-success">✅ Chave salva — respostas reais ativadas</p>
-            )}
-            {!apiKey && (
+            ) : (
               <p className="mt-2 text-[11px] text-muted-foreground">
                 Sem chave, respostas são simuladas. Com chave, usa dados reais via GPT-4o-mini.
               </p>

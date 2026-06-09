@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, User, MessageSquare, Mail } from "lucide-react";
+import { Search, User, MessageSquare, Mail, TrendingDown } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,11 @@ interface Deputado {
   url_foto: string;
 }
 
+interface Despesa {
+  tipo_despesa: string;
+  valor_liquido: number;
+}
+
 function SkeletonCard() {
   return (
     <div className="glass rounded-2xl p-5 shadow-card animate-pulse">
@@ -47,13 +52,19 @@ function getIniciais(nome: string) {
   return nome.split(" ").map((n) => n[0]).slice(0, 2).join("");
 }
 
+function formatCurrency(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
 function Deputados() {
-  const [q, setQ]                     = useState("");
-  const [deputados, setDeputados]     = useState<Deputado[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [erro, setErro]               = useState("");
-  const [openId, setOpenId]           = useState<number | null>(null);
-  const navigate                      = useNavigate();
+  const [q, setQ]                   = useState("");
+  const [deputados, setDeputados]   = useState<Deputado[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [erro, setErro]             = useState("");
+  const [openId, setOpenId]         = useState<number | null>(null);
+  const [despesas, setDespesas]     = useState<Despesa[]>([]);
+  const [loadingDesp, setLoadingDesp] = useState(false);
+  const navigate                    = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -71,6 +82,20 @@ function Deputados() {
     return () => { cancelled = true; };
   }, []);
 
+  // Busca despesas quando abre o modal
+  useEffect(() => {
+    if (!openId) { setDespesas([]); return; }
+    setLoadingDesp(true);
+    supabase
+      .from("despesas")
+      .select("tipo_despesa, valor_liquido")
+      .eq("id_deputado", openId)
+      .then(({ data }) => {
+        setDespesas((data as Despesa[]) ?? []);
+        setLoadingDesp(false);
+      });
+  }, [openId]);
+
   const filtered = useMemo(
     () => deputados.filter(
       (d) =>
@@ -81,8 +106,21 @@ function Deputados() {
     [q, deputados]
   );
 
+  // Agrupa despesas por tipo
+  const despesasPorTipo = useMemo(() => {
+    const map: Record<string, number> = {};
+    despesas.forEach(d => {
+      map[d.tipo_despesa] = (map[d.tipo_despesa] || 0) + d.valor_liquido;
+    });
+    return Object.entries(map)
+      .map(([tipo, total]) => ({ tipo, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 4);
+  }, [despesas]);
+
+  const totalGasto = despesas.reduce((acc, d) => acc + d.valor_liquido, 0);
+
   function perguntarSobre(deputado: Deputado) {
-    // Salva o contexto no sessionStorage para o chatbot ler
     sessionStorage.setItem("chatbot_pergunta", `Quais proposições o deputado ${deputado.nome} (${deputado.sigla_partido}/${deputado.sigla_uf}) apresentou?`);
     setOpenId(null);
     navigate({ to: "/chatbot" });
@@ -90,21 +128,12 @@ function Deputados() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow="Atores políticos"
-        title="Deputados"
-        description="Perfis com dados consolidados de proposições por parlamentar."
-      />
+      <PageHeader eyebrow="Atores políticos" title="Deputados" description="Perfis com dados consolidados de proposições e despesas por parlamentar." />
 
       <div className="glass rounded-2xl p-4 shadow-card">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, partido ou UF..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-9 bg-background/40"
-          />
+          <Input placeholder="Buscar por nome, partido ou UF..." value={q} onChange={(e) => setQ(e.target.value)} className="pl-9 bg-background/40" />
         </div>
         <p className="mt-2 text-xs text-muted-foreground">{filtered.length} deputados encontrados</p>
       </div>
@@ -121,13 +150,9 @@ function Deputados() {
         {!loading && filtered.map((d) => (
           <div key={d.id} className="glass rounded-2xl p-5 shadow-card hover:-translate-y-0.5 transition-all">
             <div className="flex items-center gap-3">
-              <img
-                src={d.url_foto}
-                alt={d.nome}
-                className="h-12 w-12 rounded-full object-cover"
+              <img src={d.url_foto} alt={d.nome} className="h-12 w-12 rounded-full object-cover"
                 onError={(e) => {
-                  const target = e.currentTarget;
-                  target.style.display = "none";
+                  const target = e.currentTarget; target.style.display = "none";
                   const fallback = target.nextElementSibling as HTMLElement;
                   if (fallback) fallback.style.display = "flex";
                 }}
@@ -143,9 +168,7 @@ function Deputados() {
 
             <div className="mt-4 flex items-center justify-between rounded-lg border border-border/60 bg-background/30 px-3 py-2 text-xs">
               <span className="text-muted-foreground">Email</span>
-              <a href={`mailto:${d.email}`} className="font-semibold text-primary hover:underline truncate max-w-[60%]">
-                {d.email}
-              </a>
+              <a href={`mailto:${d.email}`} className="font-semibold text-primary hover:underline truncate max-w-[60%]">{d.email}</a>
             </div>
 
             <Dialog open={openId === d.id} onOpenChange={(open) => setOpenId(open ? d.id : null)}>
@@ -155,18 +178,12 @@ function Deputados() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-xl">
-                <DialogHeader>
-                  <DialogTitle>{d.nome}</DialogTitle>
-                </DialogHeader>
+                <DialogHeader><DialogTitle>{d.nome}</DialogTitle></DialogHeader>
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
-                    <img
-                      src={d.url_foto}
-                      alt={d.nome}
-                      className="h-20 w-20 rounded-full object-cover"
+                    <img src={d.url_foto} alt={d.nome} className="h-20 w-20 rounded-full object-cover"
                       onError={(e) => {
-                        const target = e.currentTarget;
-                        target.style.display = "none";
+                        const target = e.currentTarget; target.style.display = "none";
                         const fallback = target.nextElementSibling as HTMLElement;
                         if (fallback) fallback.style.display = "flex";
                       }}
@@ -184,24 +201,46 @@ function Deputados() {
                   </div>
 
                   <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="glass rounded-lg p-3">
-                      <div className="text-xs text-muted-foreground">Partido</div>
-                      <div className="font-semibold">{d.sigla_partido}</div>
-                    </div>
-                    <div className="glass rounded-lg p-3">
-                      <div className="text-xs text-muted-foreground">UF</div>
-                      <div className="font-semibold">{d.sigla_uf}</div>
-                    </div>
-                    <div className="glass rounded-lg p-3">
-                      <div className="text-xs text-muted-foreground">Legislatura</div>
-                      <div className="font-semibold text-primary">{d.id_legislatura}ª</div>
-                    </div>
+                    <div className="glass rounded-lg p-3"><div className="text-xs text-muted-foreground">Partido</div><div className="font-semibold">{d.sigla_partido}</div></div>
+                    <div className="glass rounded-lg p-3"><div className="text-xs text-muted-foreground">UF</div><div className="font-semibold">{d.sigla_uf}</div></div>
+                    <div className="glass rounded-lg p-3"><div className="text-xs text-muted-foreground">Legislatura</div><div className="font-semibold text-primary">{d.id_legislatura}ª</div></div>
                   </div>
 
-                  <Button
-                    className="w-full bg-gradient-primary text-primary-foreground border-0"
-                    onClick={() => perguntarSobre(d)}
-                  >
+                  {/* Despesas */}
+                  <div className="rounded-xl border border-border/60 bg-background/30 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="flex items-center gap-2 text-sm font-semibold">
+                        <TrendingDown className="h-4 w-4 text-warning" /> Despesas — maio/2026
+                      </h4>
+                      {!loadingDesp && (
+                        <span className="text-xs font-semibold text-warning">
+                          {formatCurrency(totalGasto)}
+                        </span>
+                      )}
+                    </div>
+
+                    {loadingDesp ? (
+                      <div className="space-y-2">
+                        {[1,2,3].map(i => <div key={i} className="h-4 rounded bg-muted animate-pulse" />)}
+                      </div>
+                    ) : despesasPorTipo.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nenhuma despesa registrada em maio/2026.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {despesasPorTipo.map((desp) => (
+                          <div key={desp.tipo} className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground truncate max-w-[70%]">{desp.tipo}</span>
+                            <span className="font-semibold">{formatCurrency(desp.total)}</span>
+                          </div>
+                        ))}
+                        {despesas.length > 4 && (
+                          <p className="text-[10px] text-muted-foreground mt-1">+ {despesas.length - 4} outros tipos de despesa</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <Button className="w-full bg-gradient-primary text-primary-foreground border-0" onClick={() => perguntarSobre(d)}>
                     <MessageSquare className="mr-2 h-4 w-4" /> Perguntar sobre esse deputado
                   </Button>
                 </div>
