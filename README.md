@@ -44,7 +44,7 @@ JSONs brutos (data/raw/)
 ↓
 Transformação Pandas (normalização + validação)
 ↓
-PostgreSQL Supabase (deputados, partidos, proposicoes, votacoes)
+PostgreSQL Supabase (deputados, partidos, proposicoes, votacoes, despesas)
 ↓
 Camada de IA (embeddings + resumos OpenAI)
 ↓
