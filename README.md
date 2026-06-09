@@ -57,20 +57,21 @@ n8n (relatório semanal por email)
 ### Tabelas dimensão
 | Tabela | Descrição | Registros |
 |--------|-----------|-----------|
-| `deputados` | 513 deputados federais ativos | 513 |
+| `deputados` | 512 deputados federais ativos | 512 |
 | `partidos` | Partidos com representação | 21 |
 
 ### Tabelas fato
 | Tabela | Descrição | Registros |
 |--------|-----------|-----------|
-| `proposicoes` | Projetos de lei e proposições | 37.807 |
-| `votacoes` | Votações em plenário e comissões | 1.600 |
+| `proposicoes` | Projetos de lei e proposições | 15.562 |
+| `votacoes` | Votações em plenário e comissões | 1.532 |
+| `despesas` | Despesas da cota parlamentar | 7.430 |
+
+**Total:** 25.117 registros — período maio/2026
 
 ### Colunas geradas por IA
 - `tema` — classificação temática via embeddings
 - `resumo_ia` — resumo executivo gerado pelo GPT-4o-mini
-
----
 
 ## 🤖 Camada de IA
 
@@ -85,10 +86,7 @@ n8n (relatório semanal por email)
 - Prompt: resumo em 2 linhas em linguagem clara para executivos
 - Resultado: coluna `resumo_ia` na tabela `proposicoes`
 
-> **Nota técnica:** Por decisão de custo controlado, 3.500 das 37.807 proposições
-> foram classificadas por IA nesta versão acadêmica. O script é idempotente —
-> execuções futuras classificam apenas o que ainda não foi processado,
-> permitendo escala gradual conforme budget disponível.
+> **Nota técnica:** O script de IA é idempotente — processa apenas proposições com `tema IS NULL`. Isso permite escala gradual conforme budget disponível, sem reprocessar registros já classificados.
 
 ---
 
