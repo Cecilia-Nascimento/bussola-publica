@@ -145,35 +145,63 @@ def save_raw(data: list, name: str) -> str:
 if __name__ == "__main__":
 
     logger.info("=" * 55)
-    logger.info("BÚSSOLA PÚBLICA — Extração últimos 6 meses")
+    logger.info("BÚSSOLA PÚBLICA — Extração maio/2026")
     logger.info("=" * 55)
 
-    # Dimensões — deputados e partidos
+    # Dimensões
     deputados = extract_endpoint("/deputados")
     save_raw(deputados, "deputados")
 
     partidos = extract_endpoint("/partidos")
     save_raw(partidos, "partidos")
 
-    # Proposições — últimos 3 meses
+    # Proposições — maio/2026
     proposicoes = extract_endpoint(
         endpoint="/proposicoes",
         extra_params={
-            "dataInicio": "2026-03-01",
-            "dataFim":    "2026-05-29",
+            "dataInicio": "2026-05-01",
+            "dataFim":    "2026-05-31",
         }
     )
-    save_raw(proposicoes, "proposicoes_3meses")
+    save_raw(proposicoes, "proposicoes_maio2026")
 
-    # Votações — últimos 3 meses
+    # Votações — maio/2026
     votacoes = extract_endpoint(
         endpoint="/votacoes",
         extra_params={
-            "dataInicio": "2026-03-01",
-            "dataFim":    "2026-05-29",
+            "dataInicio": "2026-05-01",
+            "dataFim":    "2026-05-31",
         }
     )
-    save_raw(votacoes, "votacoes_3meses")
+    save_raw(votacoes, "votacoes_maio2026")
+
+    # Despesas — maio/2026 (uma chamada por deputado)
+    import time as _time
+    logger.info("Iniciando extração de despesas — maio/2026")
+    todas_despesas = []
+
+    for dep in deputados:
+        dep_id = dep["id"]
+        url = f"{BASE_URL}/deputados/{dep_id}/despesas"
+        params = {"ano": 2026, "mes": 5, "itens": 100}
+        pagina = 1
+        while True:
+            params["pagina"] = pagina
+            result = _make_request(url, params)
+            if result is None:
+                break
+            dados = result.get("dados") or []
+            if not dados:
+                break
+            for d in dados:
+                d["id_deputado"] = dep_id
+            todas_despesas.extend(dados)
+            pagina += 1
+            _time.sleep(0.2)
+        _time.sleep(0.3)
+
+    save_raw(todas_despesas, "despesas_maio2026")
+    logger.info(f"Total despesas extraídas: {len(todas_despesas)}")
 
     logger.info("=" * 55)
     logger.info("Extração concluída!")

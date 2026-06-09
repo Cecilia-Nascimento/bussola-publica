@@ -13,6 +13,7 @@ from transformer import (
     transform_partidos,
     transform_proposicoes,
     transform_votacoes,
+    transform_despesas,
 )
 
 load_dotenv()
@@ -24,9 +25,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ─────────────────────────────────────────────────────────────
-# Conexão com o banco
-# ─────────────────────────────────────────────────────────────
 def get_engine():
     url = os.getenv("DATABASE_URL")
     if not url:
@@ -34,23 +32,14 @@ def get_engine():
     return create_engine(url)
 
 
-# ─────────────────────────────────────────────────────────────
-# Criar tabelas
-# ─────────────────────────────────────────────────────────────
 def create_tables(engine):
-    """
-    Cria as tabelas no PostgreSQL se não existirem.
-    Ordem importa: dimensões antes das fatos.
-    """
     sql = """
-    -- Dimensão: partidos
     CREATE TABLE IF NOT EXISTS partidos (
         id      INTEGER PRIMARY KEY,
         sigla   VARCHAR(20),
         nome    VARCHAR(200)
     );
 
-    -- Dimensão: deputados
     CREATE TABLE IF NOT EXISTS deputados (
         id              INTEGER PRIMARY KEY,
         nome            VARCHAR(200),
@@ -61,7 +50,6 @@ def create_tables(engine):
         url_foto        VARCHAR(500)
     );
 
-    -- Fato: proposicoes
     CREATE TABLE IF NOT EXISTS proposicoes (
         id                  INTEGER PRIMARY KEY,
         sigla_tipo          VARCHAR(20),
@@ -76,7 +64,6 @@ def create_tables(engine):
         resumo_ia           TEXT
     );
 
-    -- Fato: votacoes
     CREATE TABLE IF NOT EXISTS votacoes (
         id                  VARCHAR(50) PRIMARY KEY,
         data                DATE,
@@ -85,49 +72,42 @@ def create_tables(engine):
         aprovacao           SMALLINT,
         sigla_orgao         VARCHAR(50)
     );
-    """
 
+    CREATE TABLE IF NOT EXISTS despesas (
+        id              SERIAL PRIMARY KEY,
+        id_deputado     INTEGER,
+        ano             INTEGER,
+        mes             INTEGER,
+        tipo_despesa    VARCHAR(200),
+        nome_fornecedor VARCHAR(300),
+        valor_documento NUMERIC(12,2),
+        valor_liquido   NUMERIC(12,2),
+        data_documento  TIMESTAMP,
+        num_documento   VARCHAR(100),
+        url_documento   VARCHAR(500)
+    );
+    """
     with engine.connect() as conn:
         conn.execute(text(sql))
         conn.commit()
-
     logger.info("✅ Tabelas criadas com sucesso!")
 
 
-# ─────────────────────────────────────────────────────────────
-# Carregar DataFrame no banco
-# ─────────────────────────────────────────────────────────────
 def load_table(df, table_name: str, engine, if_exists: str = "replace"):
-    """
-    Carrega um DataFrame no PostgreSQL.
-
-    if_exists:
-        'replace' — apaga e recria (ideal para desenvolvimento)
-        'append'  — adiciona sem apagar (ideal para produção incremental)
-    """
     logger.info(f"Carregando tabela: {table_name} ({len(df)} registros)...")
-
     df.to_sql(
         name=table_name,
         con=engine,
         if_exists=if_exists,
         index=False,
-        method="multi",    # insere em lote — muito mais rápido
-        chunksize=500      # 500 registros por vez
+        method="multi",
+        chunksize=500
     )
-
     logger.info(f"✅ {table_name}: {len(df)} registros carregados!")
 
 
-# ─────────────────────────────────────────────────────────────
-# Verificar carga no banco
-# ─────────────────────────────────────────────────────────────
 def verify_load(engine):
-    """
-    Verifica quantos registros foram carregados em cada tabela.
-    """
-    tabelas = ["partidos", "deputados", "proposicoes", "votacoes"]
-
+    tabelas = ["partidos", "deputados", "proposicoes", "votacoes", "despesas"]
     logger.info("=" * 55)
     logger.info("VERIFICAÇÃO DA CARGA:")
     with engine.connect() as conn:
@@ -138,9 +118,6 @@ def verify_load(engine):
     logger.info("=" * 55)
 
 
-# ─────────────────────────────────────────────────────────────
-# Execução principal
-# ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
 
     logger.info("=" * 55)
@@ -152,21 +129,25 @@ if __name__ == "__main__":
     # 1. Criar tabelas
     create_tables(engine)
 
-    # 2. Dimensões — replace (sempre limpas)
+    # 2. Dimensões — replace
     df_dep  = transform_deputados()
     df_part = transform_partidos()
     load_table(df_dep,  "deputados", engine, if_exists="replace")
     load_table(df_part, "partidos",  engine, if_exists="replace")
 
-    # 3. Proposições — replace com dados novos
+    # 3. Proposições maio/2026 — replace total
     df_prop = transform_proposicoes()
     load_table(df_prop, "proposicoes", engine, if_exists="replace")
 
-    # 4. Votações — replace com dados novos
+    # 4. Votações maio/2026 — replace total
     df_vot = transform_votacoes()
     load_table(df_vot, "votacoes", engine, if_exists="replace")
 
-    # 5. Garantir colunas de IA
+    # 5. Despesas maio/2026 — replace total
+    df_desp = transform_despesas()
+    load_table(df_desp, "despesas", engine, if_exists="replace")
+
+    # 6. Garantir colunas de IA
     with engine.connect() as conn:
         conn.execute(text(
             "ALTER TABLE proposicoes ADD COLUMN IF NOT EXISTS tema VARCHAR(100)"
@@ -176,7 +157,7 @@ if __name__ == "__main__":
         ))
         conn.commit()
 
-    # 6. Verificar
+    # 7. Verificar
     verify_load(engine)
 
     logger.info("Carga concluída com sucesso!")

@@ -201,6 +201,49 @@ def transform_votacoes() -> pd.DataFrame:
     logger.info(f"Votações transformadas: {df.shape}")
     return df
 
+def transform_despesas() -> pd.DataFrame:
+    """
+    Transforma os dados brutos de despesas parlamentares.
+    """
+    data = load_latest_json("despesas_maio2026")
+    df   = pd.json_normalize(data)
+
+    logger.info(f"Despesas brutas: {df.shape}")
+    logger.info(f"Colunas disponíveis: {list(df.columns)}")
+
+    colunas_map = {
+        "id_deputado":      "id_deputado",
+        "ano":              "ano",
+        "mes":              "mes",
+        "tipoDespesa":      "tipo_despesa",
+        "nomeFornecedor":   "nome_fornecedor",
+        "valorDocumento":   "valor_documento",
+        "valorLiquido":     "valor_liquido",
+        "dataDocumento":    "data_documento",
+        "numDocumento":     "num_documento",
+        "urlDocumento":     "url_documento",
+    }
+
+    colunas_existentes = {k: v for k, v in colunas_map.items() if k in df.columns}
+    df = df[list(colunas_existentes.keys())].copy()
+    df = df.rename(columns=colunas_existentes)
+
+    # Validações
+    antes = len(df)
+    df = df.dropna(subset=["id_deputado", "valor_liquido"])
+    df = df.drop_duplicates()
+    logger.info(f"Removidos {antes - len(df)} registros inválidos")
+
+    # Tipos
+    df["id_deputado"]    = pd.to_numeric(df["id_deputado"], errors="coerce")
+    df["ano"]            = pd.to_numeric(df["ano"], errors="coerce")
+    df["mes"]            = pd.to_numeric(df["mes"], errors="coerce")
+    df["valor_documento"] = pd.to_numeric(df["valor_documento"], errors="coerce")
+    df["valor_liquido"]  = pd.to_numeric(df["valor_liquido"], errors="coerce")
+    df["data_documento"] = pd.to_datetime(df["data_documento"], errors="coerce")
+
+    logger.info(f"Despesas transformadas: {df.shape}")
+    return df
 
 # ─────────────────────────────────────────────────────────────
 # Execução principal — teste das transformações
