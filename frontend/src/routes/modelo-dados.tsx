@@ -11,45 +11,63 @@ type Col = { nome: string; tipo: string; pk?: boolean; fk?: boolean; ai?: boolea
 
 const tables: { nome: string; tipo: "Dimensão" | "Fato"; registros: number; cols: Col[] }[] = [
   {
-    nome: "deputados", tipo: "Dimensão", registros: 513,
+    nome: "deputados", tipo: "Dimensão", registros: 512,
     cols: [
-      { nome: "id_deputado", tipo: "bigint", pk: true },
+      { nome: "id", tipo: "bigint", pk: true },
       { nome: "nome", tipo: "text" },
-      { nome: "id_partido", tipo: "bigint", fk: true },
-      { nome: "uf", tipo: "varchar(2)" },
+      { nome: "sigla_partido", tipo: "varchar(20)" },
+      { nome: "sigla_uf", tipo: "varchar(5)" },
+      { nome: "id_legislatura", tipo: "integer" },
       { nome: "email", tipo: "text" },
+      { nome: "url_foto", tipo: "varchar(500)" },
     ],
   },
   {
     nome: "partidos", tipo: "Dimensão", registros: 21,
     cols: [
-      { nome: "id_partido", tipo: "bigint", pk: true },
+      { nome: "id", tipo: "bigint", pk: true },
       { nome: "sigla", tipo: "varchar(20)" },
       { nome: "nome", tipo: "text" },
     ],
   },
   {
-    nome: "proposicoes", tipo: "Fato", registros: 37807,
+    nome: "proposicoes", tipo: "Fato", registros: 15562,
     cols: [
-      { nome: "id_proposicao", tipo: "bigint", pk: true },
-      { nome: "id_autor", tipo: "bigint", fk: true },
-      { nome: "tipo", tipo: "varchar(10)" },
+      { nome: "id", tipo: "bigint", pk: true },
+      { nome: "sigla_tipo", tipo: "varchar(20)" },
+      { nome: "numero", tipo: "integer" },
+      { nome: "ano", tipo: "integer" },
       { nome: "ementa", tipo: "text" },
       { nome: "data_apresentacao", tipo: "date" },
-      { nome: "status", tipo: "varchar(40)" },
-      { nome: "tema", tipo: "varchar(40)", ai: true },
+      { nome: "tema", tipo: "varchar(100)", ai: true },
       { nome: "resumo_ia", tipo: "text", ai: true },
     ],
   },
   {
-    nome: "votacoes", tipo: "Fato", registros: 1600,
+    nome: "votacoes", tipo: "Fato", registros: 1532,
     cols: [
-      { nome: "id_votacao", tipo: "bigint", pk: true },
-      { nome: "id_proposicao", tipo: "bigint", fk: true },
-      { nome: "data", tipo: "timestamp" },
-      { nome: "resultado", tipo: "varchar(40)" },
-      { nome: "sim", tipo: "int" },
-      { nome: "nao", tipo: "int" },
+      { nome: "id", tipo: "varchar(50)", pk: true },
+      { nome: "data", tipo: "date" },
+      { nome: "data_hora_registro", tipo: "timestamp" },
+      { nome: "descricao", tipo: "text" },
+      { nome: "aprovacao", tipo: "smallint" },
+      { nome: "sigla_orgao", tipo: "varchar(50)" },
+    ],
+  },
+  {
+    nome: "despesas", tipo: "Fato", registros: 7430,
+    cols: [
+      { nome: "id", tipo: "serial", pk: true },
+      { nome: "id_deputado", tipo: "integer", fk: true },
+      { nome: "ano", tipo: "integer" },
+      { nome: "mes", tipo: "integer" },
+      { nome: "tipo_despesa", tipo: "varchar(200)" },
+      { nome: "nome_fornecedor", tipo: "varchar(300)" },
+      { nome: "valor_documento", tipo: "numeric(12,2)" },
+      { nome: "valor_liquido", tipo: "numeric(12,2)" },
+      { nome: "data_documento", tipo: "timestamp" },
+      { nome: "num_documento", tipo: "varchar(100)" },
+      { nome: "url_documento", tipo: "varchar(500)" },
     ],
   },
 ];
@@ -60,10 +78,10 @@ function ModeloDados() {
       <PageHeader
         eyebrow="Modelagem"
         title="Modelo de Dados"
-        description="Esquema dimensional no PostgreSQL/Supabase: duas tabelas de dimensão e duas tabelas de fato, enriquecidas pela camada de IA."
+        description="Esquema dimensional no PostgreSQL/Supabase: duas tabelas de dimensão e três tabelas de fato, enriquecidas pela camada de IA."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {tables.map((t) => (
           <div key={t.nome} className="glass rounded-2xl p-5 shadow-card">
             <div className="flex items-center justify-between">
@@ -95,6 +113,12 @@ function ModeloDados() {
           <div />
 
           <div className="rounded-xl border border-accent/40 bg-accent/10 p-3 font-mono col-span-3 mx-auto w-fit px-10">votacoes</div>
+
+          <div />
+          <div className="flex items-center justify-center text-muted-foreground">↓ 1:N</div>
+          <div />
+
+          <div className="rounded-xl border border-accent/40 bg-accent/10 p-3 font-mono col-span-3 mx-auto w-fit px-10">despesas</div>
         </div>
       </div>
 
@@ -130,7 +154,11 @@ function ModeloDados() {
           <Sparkles className="h-5 w-5 text-accent" />
           <div>
             <h4 className="font-semibold">Colunas geradas por IA na tabela <code className="font-mono text-accent">proposicoes</code></h4>
-            <p className="mt-1 text-sm text-muted-foreground"><code className="font-mono text-foreground">tema</code> classifica cada proposição em 10 categorias via similaridade de embeddings. <code className="font-mono text-foreground">resumo_ia</code> é o resumo executivo gerado por GPT-4o-mini.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              <code className="font-mono text-foreground">tema</code> classifica cada proposição em 10 categorias via similaridade de embeddings.
+              <code className="font-mono text-foreground"> resumo_ia</code> é o resumo executivo gerado por GPT-4o-mini.
+              <strong className="text-foreground"> 15.248 de 15.562 proposições classificadas (98%).</strong>
+            </p>
           </div>
         </div>
       </div>

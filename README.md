@@ -86,7 +86,7 @@ n8n (relatório semanal por email)
 - Prompt: resumo em 2 linhas em linguagem clara para executivos
 - Resultado: coluna `resumo_ia` na tabela `proposicoes`
 
-> **Nota técnica:** O script de IA é idempotente — processa apenas proposições com `tema IS NULL`. Isso permite escala gradual conforme budget disponível, sem reprocessar registros já classificados.
+> **Nota técnica:** 15.248 de 15.562 proposições classificadas (98%) — as 314 restantes tinham ementa inválida ou muito curta. O script é idempotente — processa apenas proposições com `tema IS NULL`, sem reprocessar registros já classificados.
 
 ---
 

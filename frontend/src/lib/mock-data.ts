@@ -10,7 +10,7 @@ export const STATS = {
   votacoes: 1532,
   despesas: 7430,
   total: 25117,
-  classificadas: 15562,
+  classificadas: 15248,
   ultimaAtualizacao: "2026-06-08 06:00",
 };
 
