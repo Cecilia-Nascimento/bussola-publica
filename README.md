@@ -125,7 +125,7 @@ Conectada ao Supabase em tempo real — dados ao vivo do banco PostgreSQL.
 - Home — visão geral do projeto e métricas
 - Dashboard — KPIs, gráficos de temas e partidos ao vivo
 - Proposições — tabela filtrável com tema e resumo IA
-- Deputados — 513 deputados com fotos e perfis reais
+- Deputados — 512 deputados com fotos e perfis reais
 - Chatbot IA — perguntas em linguagem natural sobre legislação
 - Pipeline — arquitetura técnica detalhada
 - Modelo de Dados — estrutura das tabelas
