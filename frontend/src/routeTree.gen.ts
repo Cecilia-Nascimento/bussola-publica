@@ -19,6 +19,7 @@ import { Route as ChatbotRouteImport } from './routes/chatbot'
 import { Route as AutomacaoRouteImport } from './routes/automacao'
 import { Route as ApresentacaoRouteImport } from './routes/apresentacao'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DeputadosRankingRouteImport } from './routes/deputados_.ranking'
 
 const ProposicoesRoute = ProposicoesRouteImport.update({
   id: '/proposicoes',
@@ -70,6 +71,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DeputadosRankingRoute = DeputadosRankingRouteImport.update({
+  id: '/deputados_/ranking',
+  path: '/deputados/ranking',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/modelo-dados': typeof ModeloDadosRoute
   '/pipeline': typeof PipelineRoute
   '/proposicoes': typeof ProposicoesRoute
+  '/deputados/ranking': typeof DeputadosRankingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/modelo-dados': typeof ModeloDadosRoute
   '/pipeline': typeof PipelineRoute
   '/proposicoes': typeof ProposicoesRoute
+  '/deputados/ranking': typeof DeputadosRankingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/modelo-dados': typeof ModeloDadosRoute
   '/pipeline': typeof PipelineRoute
   '/proposicoes': typeof ProposicoesRoute
+  '/deputados_/ranking': typeof DeputadosRankingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/modelo-dados'
     | '/pipeline'
     | '/proposicoes'
+    | '/deputados/ranking'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/modelo-dados'
     | '/pipeline'
     | '/proposicoes'
+    | '/deputados/ranking'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/modelo-dados'
     | '/pipeline'
     | '/proposicoes'
+    | '/deputados_/ranking'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   ModeloDadosRoute: typeof ModeloDadosRoute
   PipelineRoute: typeof PipelineRoute
   ProposicoesRoute: typeof ProposicoesRoute
+  DeputadosRankingRoute: typeof DeputadosRankingRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/deputados_/ranking': {
+      id: '/deputados_/ranking'
+      path: '/deputados/ranking'
+      fullPath: '/deputados/ranking'
+      preLoaderRoute: typeof DeputadosRankingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -246,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModeloDadosRoute: ModeloDadosRoute,
   PipelineRoute: PipelineRoute,
   ProposicoesRoute: ProposicoesRoute,
+  DeputadosRankingRoute: DeputadosRankingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
