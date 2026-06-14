@@ -127,6 +127,7 @@ Conectada ao Supabase em tempo real — dados ao vivo do banco PostgreSQL.
 - Dashboard — KPIs, gráficos de temas e partidos ao vivo
 - Proposições — tabela filtrável com tema e resumo IA
 - Deputados — 512 deputados com fotos e perfis reais
+- Ranking de Gastos — ranking interativo de despesas parlamentares por categoria
 - Chatbot IA — perguntas em linguagem natural sobre legislação
 - Pipeline — arquitetura técnica detalhada
 - Modelo de Dados — estrutura das tabelas
@@ -238,6 +239,9 @@ Separar extração de transformação garante que, se o código de transformar q
 **Por que incluir despesas parlamentares?**
 Despesas da cota parlamentar completam o modelo dimensional — permitem análise de gastos por deputado, partido e tipo de despesa. Integradas ao perfil de cada deputado e ao contexto do chatbot.
 
+**Por que adicionar página de ranking de gastos?**
+Transparência no uso da cota parlamentar é um dos pilares do projeto — o ranking permite identificar padrões de gasto por deputado, partido e categoria de despesa de forma visual e interativa.
+
 **Por que embeddings para classificação de tema?**
 Classificação semântica é mais robusta que keywords — captura contexto mesmo quando as palavras exatas do tema não aparecem na ementa.
 
@@ -249,9 +253,14 @@ Stack moderna usada no mercado, com roteamento tipado, Shadcn UI e integração 
 
 ---
 
-## 👩‍💻 Autora
+## 👥 Squad DataFlow Squad 🌊
 
-**Cecilia Nascimento**  
-Pós-graduação em Engenharia de Dados
+Pós-graduação em Engenharia de Dados e IA — Xperiun Data Analytics
+
+- Cecilia Nascimento
+- Gustavo Gutierrez
+- Cesar Ramos
+- Rogério Soares
+- Geovana Costa
 
 [![GitHub](https://img.shields.io/badge/GitHub-Cecilia--Nascimento-black)](https://github.com/Cecilia-Nascimento)
