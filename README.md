@@ -13,6 +13,7 @@
 ## 🌐 Links do Projeto
 
 🔗 **Frontend interativo:** https://compass-legislative.lovable.app  
+🔗 **Dashboard Power BI:** https://app.powerbi.com/view?r=eyJrIjoiZjNiMTc5M2MtY2JmNC00ODY5LTg2MWYtNTg5OTEzMWE1MTE4IiwidCI6IjczNmZiMDhiLWEzZTctNGMwOC1iNGY4LWY4YmZjYjI1MzlmNiJ9&pageName=17119ea069c620d4b747
 🔗 **Repositório:** https://github.com/Cecilia-Nascimento/bussola-publica  
 🔗 **Banco de dados:** https://supabase.com/dashboard/project/cbaakbwnwqnelqtdwley
 
